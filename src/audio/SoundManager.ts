@@ -108,6 +108,7 @@ class SoundManager {
 
       osc.frequency.linearRampTo(600, 0.1, now);
       osc.start(now).stop(now + 0.1);
+      setTimeout(() => osc.dispose(), 200);
     } catch {
       // ignore
     }
@@ -134,6 +135,10 @@ class SoundManager {
       gain.gain.linearRampTo(0, 0.9, now);
 
       osc.start(now).stop(now + 0.9);
+      setTimeout(() => {
+        osc.dispose();
+        gain.dispose();
+      }, 1500);
     } catch {
       // ignore
     }
