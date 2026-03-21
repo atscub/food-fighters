@@ -4,15 +4,19 @@ import {
   GAME_HEIGHT,
   SCENES,
   CHARACTERS,
+  CHARACTER_KEYS,
   GROUND_Y,
   MAX_HP,
   ROUND_TIME,
   TOTAL_ROUNDS,
   WINS_NEEDED,
+  SPRITE_FRAME_WIDTH,
+  SPRITE_FRAME_HEIGHT,
 } from '../config/constants';
 import { Fighter, FighterInput } from '../objects/Fighter';
 import { TouchControls } from '../objects/TouchControls';
 import { determineRoundWinner } from '../utils/damage';
+import { soundManager } from '../audio/SoundManager';
 
 interface FightData {
   p1Character: string;
@@ -74,19 +78,45 @@ export class FightScene extends Phaser.Scene {
     this.p2Wins = 0;
   }
 
+  preload(): void {
+    // Load all character spritesheets
+    CHARACTER_KEYS.forEach((key) => {
+      const stats = CHARACTERS[key];
+      if (!this.textures.exists(stats.spriteKey)) {
+        this.load.spritesheet(stats.spriteKey, `assets/sprites/${stats.spriteKey}.png`, {
+          frameWidth: SPRITE_FRAME_WIDTH,
+          frameHeight: SPRITE_FRAME_HEIGHT,
+        });
+      }
+    });
+
+    // Load background if available
+    if (!this.textures.exists('kitchen-arena')) {
+      this.load.image('kitchen-arena', 'assets/backgrounds/kitchen-arena.png');
+    }
+  }
+
   create(): void {
     const p1Stats = CHARACTERS[this.p1Character];
     const p2Stats = CHARACTERS[this.p2Character];
 
     // Background
-    this.add
-      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x222244)
-      .setDepth(0);
+    if (this.textures.exists('kitchen-arena') && this.textures.get('kitchen-arena').key !== '__MISSING') {
+      this.add
+        .image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'kitchen-arena')
+        .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
+        .setDepth(0);
+    } else {
+      // Fallback colored rectangles
+      this.add
+        .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x222244)
+        .setDepth(0);
 
-    // Ground
-    this.add
-      .rectangle(GAME_WIDTH / 2, GROUND_Y + 35, GAME_WIDTH, 70, 0x444422)
-      .setDepth(0);
+      // Ground
+      this.add
+        .rectangle(GAME_WIDTH / 2, GROUND_Y + 35, GAME_WIDTH, 70, 0x444422)
+        .setDepth(0);
+    }
 
     // Create fighters
     this.p1 = new Fighter(this, 200, p1Stats, true, 10);
@@ -217,6 +247,8 @@ export class FightScene extends Phaser.Scene {
         })
         .setOrigin(0.5)
         .setDepth(50);
+
+      soundManager.playRoundStart();
 
       this.tweens.add({
         targets: fightText,
@@ -376,8 +408,20 @@ export class FightScene extends Phaser.Scene {
     this.p2.update(delta, p2Input, this.p1);
 
     // Check attack hits each frame during active attack windows
-    this.p1.checkAttackHit(this.p2);
-    this.p2.checkAttackHit(this.p1);
+    const p1Result = this.p1.checkAttackHit(this.p2);
+    const p2Result = this.p2.checkAttackHit(this.p1);
+
+    // Sound effects for hits / blocks
+    if (p1Result === 'hit' || p2Result === 'hit') {
+      soundManager.playHit();
+    } else if (p1Result === 'blocked' || p2Result === 'blocked') {
+      soundManager.playBlock();
+    }
+
+    // Sound effects for jumps
+    if (this.p1.jumpedThisFrame || this.p2.jumpedThisFrame) {
+      soundManager.playJump();
+    }
 
     // Update HP bars
     this.updateHpBar(this.p1HpBar, this.p1.hp);
@@ -385,6 +429,7 @@ export class FightScene extends Phaser.Scene {
 
     // Check for KO
     if (this.p1.isKO || this.p2.isKO) {
+      soundManager.playKO();
       // Small delay before ending round for dramatic effect
       this.roundActive = false;
       if (this.timerEvent) {

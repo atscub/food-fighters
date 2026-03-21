@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, GAME_HEIGHT, SCENES } from '../config/constants';
+import { soundManager } from '../audio/SoundManager';
 
 export class StartScene extends Phaser.Scene {
   constructor() {
@@ -40,6 +41,9 @@ export class StartScene extends Phaser.Scene {
       Phaser.Input.Keyboard.KeyCodes.ENTER
     );
     enterKey.once('down', () => {
+      void soundManager.init().then(() => {
+        soundManager.playMenuSelect();
+      });
       this.scene.start(SCENES.CHARACTER_SELECT);
     });
   }

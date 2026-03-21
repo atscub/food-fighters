@@ -34,6 +34,10 @@ export const FIGHTER_HEIGHT = 60;
 export const HITBOX_WIDTH = 45; // attack hitbox extends in front
 export const HITBOX_HEIGHT = 40;
 
+// Sprite frame dimensions (each spritesheet is 512x127 with 4 frames)
+export const SPRITE_FRAME_WIDTH = 128;
+export const SPRITE_FRAME_HEIGHT = 127;
+
 // Character stats
 export interface CharacterStats {
   name: string;
@@ -41,6 +45,7 @@ export interface CharacterStats {
   speed: number;
   color: number;
   power: number; // damage multiplier
+  spriteKey: string; // key used for the spritesheet texture
 }
 
 export const CHARACTERS: Record<string, CharacterStats> = {
@@ -50,6 +55,7 @@ export const CHARACTERS: Record<string, CharacterStats> = {
     speed: 220,
     color: 0xcc6633,
     power: 0.8,
+    spriteKey: 'sausage-idle',
   },
   burger: {
     name: 'Burger',
@@ -57,6 +63,7 @@ export const CHARACTERS: Record<string, CharacterStats> = {
     speed: 160,
     color: 0xcc9933,
     power: 1.3,
+    spriteKey: 'burger-idle',
   },
   bacon: {
     name: 'Bacon',
@@ -64,6 +71,7 @@ export const CHARACTERS: Record<string, CharacterStats> = {
     speed: 240,
     color: 0xff6666,
     power: 1.0,
+    spriteKey: 'bacon-idle',
   },
   cheese: {
     name: 'Cheese',
@@ -71,6 +79,7 @@ export const CHARACTERS: Record<string, CharacterStats> = {
     speed: 200,
     color: 0xffcc00,
     power: 1.0,
+    spriteKey: 'cheese-idle',
   },
 } as const;
 

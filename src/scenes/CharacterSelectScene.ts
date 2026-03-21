@@ -5,7 +5,10 @@ import {
   SCENES,
   CHARACTER_KEYS,
   CHARACTERS,
+  SPRITE_FRAME_WIDTH,
+  SPRITE_FRAME_HEIGHT,
 } from '../config/constants';
+import { soundManager } from '../audio/SoundManager';
 
 export class CharacterSelectScene extends Phaser.Scene {
   private p1Index = 0;
@@ -17,9 +20,23 @@ export class CharacterSelectScene extends Phaser.Scene {
   private p1ConfirmText!: Phaser.GameObjects.Text;
   private p2ConfirmText!: Phaser.GameObjects.Text;
   private characterLabels: Phaser.GameObjects.Text[] = [];
+  private characterSprites: Phaser.GameObjects.Sprite[] = [];
 
   constructor() {
     super({ key: SCENES.CHARACTER_SELECT });
+  }
+
+  preload(): void {
+    // Load all character spritesheets for previews
+    CHARACTER_KEYS.forEach((key) => {
+      const stats = CHARACTERS[key];
+      if (!this.textures.exists(stats.spriteKey)) {
+        this.load.spritesheet(stats.spriteKey, `assets/sprites/${stats.spriteKey}.png`, {
+          frameWidth: SPRITE_FRAME_WIDTH,
+          frameHeight: SPRITE_FRAME_HEIGHT,
+        });
+      }
+    });
   }
 
   create(): void {
@@ -41,10 +58,45 @@ export class CharacterSelectScene extends Phaser.Scene {
     // Character names displayed in a row
     const startX = 120;
     const spacing = 180;
+
+    // Create sprite previews above the names
+    this.characterSprites = CHARACTER_KEYS.map((key, i) => {
+      const char = CHARACTERS[key];
+      const spriteKey = char.spriteKey;
+      const posX = startX + i * spacing;
+      const posY = GAME_HEIGHT / 2 - 60;
+
+      // Create idle animation if texture is available
+      if (this.textures.exists(spriteKey) && this.textures.get(spriteKey).key !== '__MISSING') {
+        const animKey = `${spriteKey}-anim`;
+        if (!this.anims.exists(animKey)) {
+          this.anims.create({
+            key: animKey,
+            frames: this.anims.generateFrameNumbers(spriteKey, { start: 0, end: 3 }),
+            frameRate: 8,
+            repeat: -1,
+          });
+        }
+
+        // Scale to a nice preview size (~64px tall)
+        const previewHeight = 64;
+        const scale = previewHeight / SPRITE_FRAME_HEIGHT;
+        const spr = this.add.sprite(posX, posY, spriteKey);
+        spr.setScale(scale);
+        spr.play(animKey);
+        return spr;
+      }
+
+      // Fallback: no sprite, return a dummy invisible sprite placeholder
+      const placeholder = this.add.sprite(posX, posY, '__DEFAULT');
+      placeholder.setVisible(false);
+      return placeholder;
+    });
+
     this.characterLabels = CHARACTER_KEYS.map((key, i) => {
       const char = CHARACTERS[key];
       return this.add
-        .text(startX + i * spacing, GAME_HEIGHT / 2 - 20, char.name, {
+        .text(startX + i * spacing, GAME_HEIGHT / 2 + 5, char.name, {
           fontSize: '22px',
           fontFamily: 'monospace',
           color: '#ffffff',
@@ -54,7 +106,7 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     // P1 selection indicator
     this.p1Text = this.add
-      .text(0, GAME_HEIGHT / 2 + 30, 'P1', {
+      .text(0, GAME_HEIGHT / 2 + 40, 'P1', {
         fontSize: '16px',
         fontFamily: 'monospace',
         color: '#66aaff',
@@ -64,7 +116,7 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     // P2 selection indicator
     this.p2Text = this.add
-      .text(0, GAME_HEIGHT / 2 + 50, 'P2', {
+      .text(0, GAME_HEIGHT / 2 + 60, 'P2', {
         fontSize: '16px',
         fontFamily: 'monospace',
         color: '#ff6666',
@@ -106,6 +158,7 @@ export class CharacterSelectScene extends Phaser.Scene {
         this.p1Index =
           (this.p1Index - 1 + CHARACTER_KEYS.length) % CHARACTER_KEYS.length;
         this.updateSelectionDisplay();
+        soundManager.playSelect();
       }
     });
 
@@ -113,6 +166,7 @@ export class CharacterSelectScene extends Phaser.Scene {
       if (!this.p1Confirmed) {
         this.p1Index = (this.p1Index + 1) % CHARACTER_KEYS.length;
         this.updateSelectionDisplay();
+        soundManager.playSelect();
       }
     });
 
@@ -122,6 +176,7 @@ export class CharacterSelectScene extends Phaser.Scene {
         this.p1ConfirmText.setText(
           `P1: ${CHARACTERS[CHARACTER_KEYS[this.p1Index]].name} LOCKED IN!`
         );
+        soundManager.playConfirm();
         this.checkBothConfirmed();
       }
     });
@@ -140,6 +195,7 @@ export class CharacterSelectScene extends Phaser.Scene {
         this.p2Index =
           (this.p2Index - 1 + CHARACTER_KEYS.length) % CHARACTER_KEYS.length;
         this.updateSelectionDisplay();
+        soundManager.playSelect();
       }
     });
 
@@ -147,6 +203,7 @@ export class CharacterSelectScene extends Phaser.Scene {
       if (!this.p2Confirmed) {
         this.p2Index = (this.p2Index + 1) % CHARACTER_KEYS.length;
         this.updateSelectionDisplay();
+        soundManager.playSelect();
       }
     });
 
@@ -156,6 +213,7 @@ export class CharacterSelectScene extends Phaser.Scene {
         this.p2ConfirmText.setText(
           `P2: ${CHARACTERS[CHARACTER_KEYS[this.p2Index]].name} LOCKED IN!`
         );
+        soundManager.playConfirm();
         this.checkBothConfirmed();
       }
     });
@@ -195,5 +253,7 @@ export class CharacterSelectScene extends Phaser.Scene {
 
   shutdown(): void {
     this.input.keyboard?.removeAllKeys(true);
+    this.characterSprites.forEach((s) => s.destroy());
+    this.characterSprites = [];
   }
 }

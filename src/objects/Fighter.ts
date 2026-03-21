@@ -12,6 +12,8 @@ import {
   ATTACK_COOLDOWN,
   ATTACK_DURATION,
   HIT_STUN_DURATION,
+  SPRITE_FRAME_WIDTH,
+  SPRITE_FRAME_HEIGHT,
 } from '../config/constants';
 import { calculateDamage, AttackType } from '../utils/damage';
 
@@ -24,6 +26,9 @@ export type FighterState =
   | 'blocking'
   | 'hitstun'
   | 'ko';
+
+/** Result of an attack-hit check, used to trigger sound effects. */
+export type AttackResult = 'none' | 'hit' | 'blocked';
 
 export interface FighterInput {
   left: boolean;
@@ -55,12 +60,17 @@ export class Fighter {
 
   // Rendering
   public body: Phaser.GameObjects.Rectangle;
+  public sprite: Phaser.GameObjects.Sprite | null = null;
+  private useSprite = false;
   private hitboxDebug: Phaser.GameObjects.Rectangle | null = null;
 
   // Track whether input was already pressed (for edge-trigger)
   private prevPunch = false;
   private prevKick = false;
   private prevJump = false;
+
+  /** Set to true on the frame a jump starts; cleared by the caller. */
+  public jumpedThisFrame = false;
 
   // Track current attack type and whether it has already connected
   private currentAttackType: AttackType | null = null;
@@ -79,6 +89,37 @@ export class Fighter {
     this.hp = stats.hp;
     this.facingRight = facingRight;
 
+    // Try to create a sprite from the character's spritesheet
+    const spriteKey = stats.spriteKey;
+    if (scene.textures.exists(spriteKey) && scene.textures.get(spriteKey).key !== '__MISSING') {
+      // Create idle animation if it doesn't exist yet
+      const animKey = `${spriteKey}-anim`;
+      if (!scene.anims.exists(animKey)) {
+        scene.anims.create({
+          key: animKey,
+          frames: scene.anims.generateFrameNumbers(spriteKey, { start: 0, end: 3 }),
+          frameRate: 8,
+          repeat: -1,
+        });
+      }
+
+      // Calculate scale to fit FIGHTER_WIDTH x FIGHTER_HEIGHT
+      const scaleX = FIGHTER_WIDTH / SPRITE_FRAME_WIDTH;
+      const scaleY = FIGHTER_HEIGHT / SPRITE_FRAME_HEIGHT;
+
+      this.sprite = scene.add.sprite(
+        x,
+        GROUND_Y - FIGHTER_HEIGHT / 2,
+        spriteKey,
+      );
+      this.sprite.setScale(scaleX, scaleY);
+      this.sprite.setDepth(depth);
+      this.sprite.play(animKey);
+      this.sprite.setFlipX(!facingRight);
+      this.useSprite = true;
+    }
+
+    // Always create the rectangle body (used for fallback rendering or hidden behind sprite)
     this.body = scene.add.rectangle(
       x,
       GROUND_Y - FIGHTER_HEIGHT / 2,
@@ -87,6 +128,11 @@ export class Fighter {
       stats.color,
     );
     this.body.setDepth(depth);
+
+    // If sprite is available, hide the rectangle
+    if (this.useSprite) {
+      this.body.setAlpha(0);
+    }
   }
 
   /** Reset fighter for a new round */
@@ -106,6 +152,16 @@ export class Fighter {
     this.prevJump = false;
     this.currentAttackType = null;
     this.hasHitThisAttack = false;
+
+    // Reset sprite state
+    if (this.sprite) {
+      this.sprite.clearTint();
+      this.sprite.setAlpha(1);
+      const baseScaleX = FIGHTER_WIDTH / SPRITE_FRAME_WIDTH;
+      const baseScaleY = FIGHTER_HEIGHT / SPRITE_FRAME_HEIGHT;
+      this.sprite.setScale(baseScaleX, baseScaleY);
+    }
+
     this.syncGraphics();
   }
 
@@ -175,11 +231,12 @@ export class Fighter {
     }
 
     // --- Jump (edge-triggered) ---
+    this.jumpedThisFrame = false;
     if (canAct && input.jump && !this.prevJump && this.onGround) {
       this.velY = JUMP_VELOCITY;
       this.onGround = false;
       this.state = 'jumping';
-      // Release block if jumping
+      this.jumpedThisFrame = true;
     }
 
     // --- Gravity ---
@@ -249,26 +306,31 @@ export class Fighter {
     this.hasHitThisAttack = false;
   }
 
-  /** Check attack hitbox overlap each frame during the active attack window */
-  checkAttackHit(opponent: Fighter): void {
+  /** Check attack hitbox overlap each frame during the active attack window.
+   *  Returns 'hit', 'blocked', or 'none' so the caller can trigger sounds. */
+  checkAttackHit(opponent: Fighter): AttackResult {
     if (
       (this.state !== 'punching' && this.state !== 'kicking') ||
       this.hasHitThisAttack ||
       this.currentAttackType === null
     ) {
-      return;
+      return 'none';
     }
 
     if (this.attackHits(opponent)) {
+      const isBlocking = opponent.state === 'blocking';
       const dmg = calculateDamage({
         attackType: this.currentAttackType,
         power: this.stats.power,
         isAerial: !this.onGround,
-        isBlocking: opponent.state === 'blocking',
+        isBlocking,
       });
       opponent.takeDamage(dmg);
       this.hasHitThisAttack = true;
+      return isBlocking ? 'blocked' : 'hit';
     }
+
+    return 'none';
   }
 
   /** Simple rectangle overlap: hitbox (in front of attacker) vs defender hurtbox */
@@ -324,6 +386,51 @@ export class Fighter {
   private syncGraphics(): void {
     this.body.setPosition(this.x, this.y - FIGHTER_HEIGHT / 2);
 
+    if (this.useSprite && this.sprite) {
+      // Position sprite at the same location as the rectangle body
+      this.sprite.setPosition(this.x, this.y - FIGHTER_HEIGHT / 2);
+      this.sprite.setFlipX(!this.facingRight);
+
+      const baseScaleX = FIGHTER_WIDTH / SPRITE_FRAME_WIDTH;
+      const baseScaleY = FIGHTER_HEIGHT / SPRITE_FRAME_HEIGHT;
+
+      // Flash during hitstun
+      if (this.state === 'hitstun') {
+        this.sprite.setAlpha(Math.sin(Date.now() * 0.02) > 0 ? 1 : 0.3);
+      } else if (this.state === 'ko') {
+        this.sprite.setAlpha(0.4);
+        // Flatten the sprite for KO
+        this.sprite.setScale(baseScaleX, baseScaleY * 0.4);
+        this.sprite.y = this.y - (FIGHTER_HEIGHT * 0.4) / 2;
+      } else {
+        this.sprite.setAlpha(1);
+        this.sprite.setScale(baseScaleX, baseScaleY);
+      }
+
+      // Visual feedback for states
+      if (this.state === 'blocking') {
+        // Slightly wider, tinted darker
+        this.sprite.setScale(baseScaleX * 1.15, baseScaleY);
+        this.sprite.setTint(
+          Phaser.Display.Color.GetColor(
+            ((this.stats.color >> 16) & 0xff) * 0.6,
+            ((this.stats.color >> 8) & 0xff) * 0.6,
+            (this.stats.color & 0xff) * 0.6,
+          )
+        );
+      } else if (this.state === 'punching' || this.state === 'kicking') {
+        this.sprite.setTint(0xffffff); // Flash white during attack
+      } else {
+        this.sprite.clearTint();
+      }
+
+      // Keep the rectangle hidden when using sprite
+      this.body.setAlpha(0);
+      return;
+    }
+
+    // --- Fallback: rectangle-only rendering ---
+
     // Flash during hitstun
     if (this.state === 'hitstun') {
       this.body.setAlpha(Math.sin(Date.now() * 0.02) > 0 ? 1 : 0.3);
@@ -356,6 +463,7 @@ export class Fighter {
 
   destroy(): void {
     this.body.destroy();
+    if (this.sprite) this.sprite.destroy();
     if (this.hitboxDebug) this.hitboxDebug.destroy();
   }
 }
