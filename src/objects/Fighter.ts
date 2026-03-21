@@ -14,6 +14,9 @@ import {
   HIT_STUN_DURATION,
   SPRITE_FRAME_WIDTH,
   SPRITE_FRAME_HEIGHT,
+  ANIM_STATES,
+  AnimState,
+  animSpriteKey,
 } from '../config/constants';
 import { calculateDamage, AttackType } from '../utils/damage';
 
@@ -63,6 +66,10 @@ export class Fighter {
   public sprite: Phaser.GameObjects.Sprite | null = null;
   private useSprite = false;
   private hitboxDebug: Phaser.GameObjects.Rectangle | null = null;
+  private charKey: string = ''; // e.g. 'sausage'
+  private animKeys: Map<AnimState, string> = new Map();
+  private currentAnimState: AnimState = 'idle';
+  private prevAnimState: AnimState | null = null;
 
   // Track whether input was already pressed (for edge-trigger)
   private prevPunch = false;
@@ -89,18 +96,33 @@ export class Fighter {
     this.hp = stats.hp;
     this.facingRight = facingRight;
 
+    // Derive the character key (e.g. 'sausage') from spriteKey (e.g. 'sausage-idle')
+    this.charKey = stats.spriteKey.replace(/-idle$/, '');
+
     // Try to create a sprite from the character's spritesheet
     const spriteKey = stats.spriteKey;
     if (scene.textures.exists(spriteKey) && scene.textures.get(spriteKey).key !== '__MISSING') {
-      // Create idle animation if it doesn't exist yet
-      const animKey = `${spriteKey}-anim`;
-      if (!scene.anims.exists(animKey)) {
-        scene.anims.create({
-          key: animKey,
-          frames: scene.anims.generateFrameNumbers(spriteKey, { start: 0, end: 3 }),
-          frameRate: 8,
-          repeat: -1,
-        });
+      // Create animations for all available states
+      for (const animState of ANIM_STATES) {
+        const textureKey = animSpriteKey(this.charKey, animState);
+        const animKey = `${textureKey}-anim`;
+
+        if (
+          scene.textures.exists(textureKey) &&
+          scene.textures.get(textureKey).key !== '__MISSING' &&
+          !scene.anims.exists(animKey)
+        ) {
+          // One-shot animations for punch, kick, ko; looping for others
+          const isOneShot = animState === 'punch' || animState === 'kick' || animState === 'ko';
+          scene.anims.create({
+            key: animKey,
+            frames: scene.anims.generateFrameNumbers(textureKey, { start: 0, end: 3 }),
+            frameRate: animState === 'walk' ? 10 : 8,
+            repeat: isOneShot ? 0 : -1,
+          });
+        }
+
+        this.animKeys.set(animState, animKey);
       }
 
       // Calculate scale to fit FIGHTER_WIDTH x FIGHTER_HEIGHT
@@ -114,7 +136,12 @@ export class Fighter {
       );
       this.sprite.setScale(scaleX, scaleY);
       this.sprite.setDepth(depth);
-      this.sprite.play(animKey);
+
+      // Play idle animation
+      const idleAnimKey = this.animKeys.get('idle');
+      if (idleAnimKey && scene.anims.exists(idleAnimKey)) {
+        this.sprite.play(idleAnimKey);
+      }
       this.sprite.setFlipX(!facingRight);
       this.useSprite = true;
     }
@@ -153,7 +180,9 @@ export class Fighter {
     this.currentAttackType = null;
     this.hasHitThisAttack = false;
 
-    // Reset sprite state
+    // Reset sprite and animation state
+    this.currentAnimState = 'idle';
+    this.prevAnimState = null;
     if (this.sprite) {
       this.sprite.clearTint();
       this.sprite.setAlpha(1);
@@ -383,6 +412,20 @@ export class Fighter {
     return this.hitStunTimer > 0;
   }
 
+  /** Map FighterState to the AnimState for spritesheet lookup. */
+  private stateToAnimState(): AnimState {
+    switch (this.state) {
+      case 'walking': return 'walk';
+      case 'punching': return 'punch';
+      case 'kicking': return 'kick';
+      case 'jumping': return 'jump';
+      case 'blocking': return 'block';
+      case 'ko': return 'ko';
+      case 'hitstun': return 'idle'; // hitstun reuses idle sprite with flashing
+      default: return 'idle';
+    }
+  }
+
   private syncGraphics(): void {
     this.body.setPosition(this.x, this.y - FIGHTER_HEIGHT / 2);
 
@@ -394,33 +437,33 @@ export class Fighter {
       const baseScaleX = FIGHTER_WIDTH / SPRITE_FRAME_WIDTH;
       const baseScaleY = FIGHTER_HEIGHT / SPRITE_FRAME_HEIGHT;
 
+      // Determine which animation to play based on current state
+      const targetAnimState = this.stateToAnimState();
+
+      if (targetAnimState !== this.prevAnimState) {
+        const animKey = this.animKeys.get(targetAnimState);
+        const textureKey = animSpriteKey(this.charKey, targetAnimState);
+
+        if (animKey && this.sprite.scene.anims.exists(animKey)) {
+          // Switch texture and play corresponding animation
+          this.sprite.setTexture(textureKey);
+          this.sprite.play(animKey, true);
+        }
+        this.prevAnimState = targetAnimState;
+      }
+
       // Flash during hitstun
       if (this.state === 'hitstun') {
         this.sprite.setAlpha(Math.sin(Date.now() * 0.02) > 0 ? 1 : 0.3);
+        this.sprite.clearTint();
       } else if (this.state === 'ko') {
         this.sprite.setAlpha(0.4);
-        // Flatten the sprite for KO
-        this.sprite.setScale(baseScaleX, baseScaleY * 0.4);
-        this.sprite.y = this.y - (FIGHTER_HEIGHT * 0.4) / 2;
+        this.sprite.clearTint();
+        // Scale is normal; the KO spritesheet already shows the collapsed pose
+        this.sprite.setScale(baseScaleX, baseScaleY);
       } else {
         this.sprite.setAlpha(1);
         this.sprite.setScale(baseScaleX, baseScaleY);
-      }
-
-      // Visual feedback for states
-      if (this.state === 'blocking') {
-        // Slightly wider, tinted darker
-        this.sprite.setScale(baseScaleX * 1.15, baseScaleY);
-        this.sprite.setTint(
-          Phaser.Display.Color.GetColor(
-            ((this.stats.color >> 16) & 0xff) * 0.6,
-            ((this.stats.color >> 8) & 0xff) * 0.6,
-            (this.stats.color & 0xff) * 0.6,
-          )
-        );
-      } else if (this.state === 'punching' || this.state === 'kicking') {
-        this.sprite.setTint(0xffffff); // Flash white during attack
-      } else {
         this.sprite.clearTint();
       }
 

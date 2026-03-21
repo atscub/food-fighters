@@ -12,6 +12,8 @@ import {
   WINS_NEEDED,
   SPRITE_FRAME_WIDTH,
   SPRITE_FRAME_HEIGHT,
+  ANIM_STATES,
+  animSpriteKey,
 } from '../config/constants';
 import { Fighter, FighterInput } from '../objects/Fighter';
 import { TouchControls } from '../objects/TouchControls';
@@ -79,15 +81,17 @@ export class FightScene extends Phaser.Scene {
   }
 
   preload(): void {
-    // Load all character spritesheets
-    CHARACTER_KEYS.forEach((key) => {
-      const stats = CHARACTERS[key];
-      if (!this.textures.exists(stats.spriteKey)) {
-        this.load.spritesheet(stats.spriteKey, `assets/sprites/${stats.spriteKey}.png`, {
-          frameWidth: SPRITE_FRAME_WIDTH,
-          frameHeight: SPRITE_FRAME_HEIGHT,
-        });
-      }
+    // Load ALL animation spritesheets for each character (idle, walk, punch, kick, jump, block, ko)
+    CHARACTER_KEYS.forEach((charKey) => {
+      ANIM_STATES.forEach((state) => {
+        const key = animSpriteKey(charKey, state);
+        if (!this.textures.exists(key)) {
+          this.load.spritesheet(key, `assets/sprites/${key}.png`, {
+            frameWidth: SPRITE_FRAME_WIDTH,
+            frameHeight: SPRITE_FRAME_HEIGHT,
+          });
+        }
+      });
     });
 
     // Load background if available

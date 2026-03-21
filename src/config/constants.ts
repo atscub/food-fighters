@@ -34,9 +34,18 @@ export const FIGHTER_HEIGHT = 60;
 export const HITBOX_WIDTH = 45; // attack hitbox extends in front
 export const HITBOX_HEIGHT = 40;
 
-// Sprite frame dimensions (each spritesheet is 512x127 with 4 frames)
+// Sprite frame dimensions (each spritesheet is 512x128 with 4 frames)
 export const SPRITE_FRAME_WIDTH = 128;
-export const SPRITE_FRAME_HEIGHT = 127;
+export const SPRITE_FRAME_HEIGHT = 128;
+
+// Animation state spritesheet keys (per-character, per-state)
+export const ANIM_STATES = ['idle', 'walk', 'punch', 'kick', 'jump', 'block', 'ko'] as const;
+export type AnimState = (typeof ANIM_STATES)[number];
+
+/** Build the spritesheet texture key for a given character and animation state. */
+export function animSpriteKey(charKey: string, state: AnimState): string {
+  return `${charKey}-${state}`;
+}
 
 // Character stats
 export interface CharacterStats {
@@ -45,7 +54,7 @@ export interface CharacterStats {
   speed: number;
   color: number;
   power: number; // damage multiplier
-  spriteKey: string; // key used for the spritesheet texture
+  spriteKey: string; // key used for the idle spritesheet texture
 }
 
 export const CHARACTERS: Record<string, CharacterStats> = {
