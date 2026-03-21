@@ -270,6 +270,9 @@ export class FightScene extends Phaser.Scene {
     this.roundTimer = ROUND_TIME;
     this.timerText.setText(String(this.roundTimer));
 
+    // Start background music on first round, resume if stopped
+    soundManager.playBGM();
+
     this.timerEvent = this.time.addEvent({
       delay: 1000,
       callback: () => {
@@ -327,6 +330,9 @@ export class FightScene extends Phaser.Scene {
   }
 
   private showMatchWinner(): void {
+    // Stop background music when match ends
+    soundManager.stopBGM();
+
     let winnerLabel: string;
     if (this.p1Wins > this.p2Wins) {
       winnerLabel = 'P1';
