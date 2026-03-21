@@ -10,6 +10,9 @@ import {
   TOTAL_ROUNDS,
   WINS_NEEDED,
 } from '../config/constants';
+import { Fighter, FighterInput } from '../objects/Fighter';
+import { TouchControls } from '../objects/TouchControls';
+import { determineRoundWinner } from '../utils/damage';
 
 interface FightData {
   p1Character: string;
@@ -17,24 +20,32 @@ interface FightData {
 }
 
 export class FightScene extends Phaser.Scene {
-  private p1!: Phaser.GameObjects.Rectangle;
-  private p2!: Phaser.GameObjects.Rectangle;
-  private p1Hp = MAX_HP;
-  private p2Hp = MAX_HP;
+  // Fighters
+  private p1!: Fighter;
+  private p2!: Fighter;
+
+  // HUD
   private p1HpBar!: Phaser.GameObjects.Rectangle;
   private p2HpBar!: Phaser.GameObjects.Rectangle;
-  private roundTimer = ROUND_TIME;
+  private p1HpBg!: Phaser.GameObjects.Rectangle;
+  private p2HpBg!: Phaser.GameObjects.Rectangle;
   private timerText!: Phaser.GameObjects.Text;
+  private roundText!: Phaser.GameObjects.Text;
+  private p1WinsText!: Phaser.GameObjects.Text;
+  private p2WinsText!: Phaser.GameObjects.Text;
+
+  // Round state
+  private roundTimer = ROUND_TIME;
   private timerEvent!: Phaser.Time.TimerEvent;
   private round = 1;
   private p1Wins = 0;
   private p2Wins = 0;
-  private roundText!: Phaser.GameObjects.Text;
   private p1Character = 'sausage';
   private p2Character = 'burger';
   private roundActive = false;
+  private _roundEnded = false;
 
-  // Movement keys
+  // Keyboard keys
   private keyW!: Phaser.Input.Keyboard.Key;
   private keyA!: Phaser.Input.Keyboard.Key;
   private keyS!: Phaser.Input.Keyboard.Key;
@@ -48,11 +59,8 @@ export class FightScene extends Phaser.Scene {
   private keyK!: Phaser.Input.Keyboard.Key;
   private keyL!: Phaser.Input.Keyboard.Key;
 
-  // Velocities for manual movement
-  private p1VelX = 0;
-  private p1VelY = 0;
-  private p2VelX = 0;
-  private p2VelY = 0;
+  // Touch controls
+  private touchControls!: TouchControls;
 
   constructor() {
     super({ key: SCENES.FIGHT });
@@ -71,22 +79,34 @@ export class FightScene extends Phaser.Scene {
     const p2Stats = CHARACTERS[this.p2Character];
 
     // Background
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x222244);
+    this.add
+      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x222244)
+      .setDepth(0);
 
     // Ground
-    this.add.rectangle(GAME_WIDTH / 2, GROUND_Y + 35, GAME_WIDTH, 70, 0x444422);
+    this.add
+      .rectangle(GAME_WIDTH / 2, GROUND_Y + 35, GAME_WIDTH, 70, 0x444422)
+      .setDepth(0);
 
-    // Fighters (colored rectangles as placeholders)
-    this.p1 = this.add.rectangle(200, GROUND_Y - 30, 40, 60, p1Stats.color);
-    this.p2 = this.add.rectangle(600, GROUND_Y - 30, 40, 60, p2Stats.color);
+    // Create fighters
+    this.p1 = new Fighter(this, 200, p1Stats, true, 10);
+    this.p2 = new Fighter(this, 600, p2Stats, false, 10);
 
+    // --- HUD ---
     // HP bar backgrounds
-    this.add.rectangle(170, 30, 260, 20, 0x333333);
-    this.add.rectangle(GAME_WIDTH - 170, 30, 260, 20, 0x333333);
+    this.p1HpBg = this.add.rectangle(170, 30, 260, 20, 0x333333).setDepth(20);
+    this.p2HpBg = this.add
+      .rectangle(GAME_WIDTH - 170, 30, 260, 20, 0x333333)
+      .setDepth(20);
 
-    // HP bars
-    this.p1HpBar = this.add.rectangle(170, 30, 250, 14, 0x44cc44);
-    this.p2HpBar = this.add.rectangle(GAME_WIDTH - 170, 30, 250, 14, 0x44cc44);
+    // HP bars (foreground)
+    // P1 bar: origin at left edge, shrinks from right
+    this.p1HpBar = this.add.rectangle(45, 30, 250, 14, 0x44cc44).setOrigin(0, 0.5).setDepth(21);
+    // P2 bar: origin at right edge, shrinks from left
+    this.p2HpBar = this.add
+      .rectangle(GAME_WIDTH - 45, 30, 250, 14, 0x44cc44)
+      .setOrigin(1, 0.5)
+      .setDepth(21);
 
     // HP labels
     this.add
@@ -95,7 +115,8 @@ export class FightScene extends Phaser.Scene {
         fontFamily: 'monospace',
         color: '#ffffff',
       })
-      .setOrigin(0);
+      .setOrigin(0)
+      .setDepth(22);
 
     this.add
       .text(GAME_WIDTH - 45, 22, `P2 ${p2Stats.name}`, {
@@ -103,7 +124,8 @@ export class FightScene extends Phaser.Scene {
         fontFamily: 'monospace',
         color: '#ffffff',
       })
-      .setOrigin(1, 0);
+      .setOrigin(1, 0)
+      .setDepth(22);
 
     // Timer
     this.timerText = this.add
@@ -113,7 +135,8 @@ export class FightScene extends Phaser.Scene {
         color: '#ffffff',
         fontStyle: 'bold',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(22);
 
     // Round display
     this.roundText = this.add
@@ -122,49 +145,36 @@ export class FightScene extends Phaser.Scene {
         fontFamily: 'monospace',
         color: '#cccccc',
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(22);
 
     // Win counters
-    this.add
+    this.p1WinsText = this.add
       .text(45, 50, `Wins: ${this.p1Wins}`, {
         fontSize: '12px',
         fontFamily: 'monospace',
         color: '#66aaff',
       })
-      .setOrigin(0);
+      .setOrigin(0)
+      .setDepth(22);
 
-    this.add
+    this.p2WinsText = this.add
       .text(GAME_WIDTH - 45, 50, `Wins: ${this.p2Wins}`, {
         fontSize: '12px',
         fontFamily: 'monospace',
         color: '#ff6666',
       })
-      .setOrigin(1, 0);
+      .setOrigin(1, 0)
+      .setDepth(22);
 
-    // "FIGHT!" text that fades
-    const fightText = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'FIGHT!', {
-        fontSize: '64px',
-        fontFamily: 'monospace',
-        color: '#ff4444',
-        fontStyle: 'bold',
-      })
-      .setOrigin(0.5);
-
-    this.tweens.add({
-      targets: fightText,
-      alpha: 0,
-      scale: 2,
-      duration: 1000,
-      ease: 'Power2',
-      onComplete: () => {
-        fightText.destroy();
-        this.startRound();
-      },
-    });
-
-    // Setup controls
+    // Setup keyboard controls
     this.setupControls();
+
+    // Setup touch controls
+    this.touchControls = new TouchControls(this);
+
+    // Show "Round 1" then "FIGHT!" then start
+    this.showRoundIntro();
   }
 
   private setupControls(): void {
@@ -182,31 +192,56 @@ export class FightScene extends Phaser.Scene {
     this.keyRight = kb.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT);
     this.keyK = kb.addKey(Phaser.Input.Keyboard.KeyCodes.K);
     this.keyL = kb.addKey(Phaser.Input.Keyboard.KeyCodes.L);
+  }
 
-    // Placeholder attack logging
-    this.keyF.on('down', () => {
-      if (this.roundActive) console.log('P1 PUNCH');
-    });
-    this.keyG.on('down', () => {
-      if (this.roundActive) console.log('P1 KICK');
-    });
-    this.keyK.on('down', () => {
-      if (this.roundActive) console.log('P2 PUNCH');
-    });
-    this.keyL.on('down', () => {
-      if (this.roundActive) console.log('P2 KICK');
+  private showRoundIntro(): void {
+    const roundLabel = this.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, `Round ${this.round}`, {
+        fontSize: '48px',
+        fontFamily: 'monospace',
+        color: '#ffffff',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5)
+      .setDepth(50);
+
+    this.time.delayedCall(1200, () => {
+      roundLabel.destroy();
+
+      const fightText = this.add
+        .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'FIGHT!', {
+          fontSize: '64px',
+          fontFamily: 'monospace',
+          color: '#ff4444',
+          fontStyle: 'bold',
+        })
+        .setOrigin(0.5)
+        .setDepth(50);
+
+      this.tweens.add({
+        targets: fightText,
+        alpha: 0,
+        scale: 2,
+        duration: 800,
+        ease: 'Power2',
+        onComplete: () => {
+          fightText.destroy();
+          this.startRound();
+        },
+      });
     });
   }
 
   private startRound(): void {
     this.roundActive = true;
+    this._roundEnded = false;
     this.roundTimer = ROUND_TIME;
-    this.p1Hp = MAX_HP;
-    this.p2Hp = MAX_HP;
+    this.timerText.setText(String(this.roundTimer));
 
     this.timerEvent = this.time.addEvent({
       delay: 1000,
       callback: () => {
+        if (!this.roundActive) return;
         this.roundTimer--;
         this.timerText.setText(String(this.roundTimer));
         if (this.roundTimer <= 0) {
@@ -218,107 +253,164 @@ export class FightScene extends Phaser.Scene {
   }
 
   private endRound(): void {
+    if (this._roundEnded) return;
+    this._roundEnded = true;
     this.roundActive = false;
     if (this.timerEvent) {
       this.timerEvent.destroy();
     }
 
     // Determine round winner
-    if (this.p1Hp > this.p2Hp) {
+    const outcome = determineRoundWinner(this.p1.hp, this.p2.hp);
+    if (outcome === 'p1') {
       this.p1Wins++;
-    } else if (this.p2Hp > this.p1Hp) {
+    } else if (outcome === 'p2') {
       this.p2Wins++;
     }
-    // Draw: no wins awarded
+    // draw: no wins awarded
+
+    // Update win counter display
+    this.p1WinsText.setText(`Wins: ${this.p1Wins}`);
+    this.p2WinsText.setText(`Wins: ${this.p2Wins}`);
 
     // Check for match winner
     if (this.p1Wins >= WINS_NEEDED || this.p2Wins >= WINS_NEEDED) {
-      const winner = this.p1Wins >= WINS_NEEDED ? 'P1' : 'P2';
-      const winText = this.add
-        .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, `${winner} WINS!`, {
-          fontSize: '48px',
-          fontFamily: 'monospace',
-          color: '#ffcc00',
-          fontStyle: 'bold',
-        })
-        .setOrigin(0.5);
-
-      this.time.delayedCall(3000, () => {
-        winText.destroy();
-        this.scene.start(SCENES.CHARACTER_SELECT);
-      });
+      this.showMatchWinner();
     } else if (this.round < TOTAL_ROUNDS) {
       this.round++;
       this.roundText.setText(`Round ${this.round}`);
 
-      // Reset positions
-      this.p1.setPosition(200, GROUND_Y - 30);
-      this.p2.setPosition(600, GROUND_Y - 30);
+      // Reset fighters
+      this.p1.reset(200);
+      this.p2.reset(600);
 
-      // Show round text then start
-      const nextRoundText = this.add
-        .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, `Round ${this.round}`, {
-          fontSize: '48px',
-          fontFamily: 'monospace',
-          color: '#ffffff',
-          fontStyle: 'bold',
-        })
-        .setOrigin(0.5);
-
-      this.time.delayedCall(1500, () => {
-        nextRoundText.destroy();
-        this.startRound();
+      // Show round intro then start
+      this.time.delayedCall(500, () => {
+        this.showRoundIntro();
       });
     } else {
-      // All rounds played, determine winner
-      const winner =
-        this.p1Wins > this.p2Wins
-          ? 'P1'
-          : this.p2Wins > this.p1Wins
-            ? 'P2'
-            : 'NOBODY';
-      const winText = this.add
-        .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, `${winner} WINS!`, {
-          fontSize: '48px',
-          fontFamily: 'monospace',
-          color: '#ffcc00',
-          fontStyle: 'bold',
-        })
-        .setOrigin(0.5);
+      // All rounds played
+      this.showMatchWinner();
+    }
+  }
 
-      this.time.delayedCall(3000, () => {
-        winText.destroy();
-        this.scene.start(SCENES.CHARACTER_SELECT);
+  private showMatchWinner(): void {
+    let winnerLabel: string;
+    if (this.p1Wins > this.p2Wins) {
+      winnerLabel = 'P1';
+    } else if (this.p2Wins > this.p1Wins) {
+      winnerLabel = 'P2';
+    } else {
+      winnerLabel = 'NOBODY';
+    }
+
+    const winText = this.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, `${winnerLabel} WINS!`, {
+        fontSize: '48px',
+        fontFamily: 'monospace',
+        color: '#ffcc00',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5)
+      .setDepth(50);
+
+    this.time.delayedCall(3000, () => {
+      winText.destroy();
+      this.cleanUp();
+      this.scene.start(SCENES.CHARACTER_SELECT);
+    });
+  }
+
+  private cleanUp(): void {
+    this.p1.destroy();
+    this.p2.destroy();
+    this.touchControls.destroy();
+  }
+
+  /** Read keyboard state and merge with touch for P1 */
+  private getP1Input(): FighterInput {
+    const kbInput: FighterInput = {
+      left: this.keyA.isDown,
+      right: this.keyD.isDown,
+      jump: this.keyW.isDown,
+      block: this.keyS.isDown,
+      punch: this.keyF.isDown,
+      kick: this.keyG.isDown,
+    };
+
+    // Merge touch controls (OR with keyboard)
+    if (this.touchControls.isVisible) {
+      const touch = this.touchControls.getInput();
+      return {
+        left: kbInput.left || touch.left,
+        right: kbInput.right || touch.right,
+        jump: kbInput.jump || touch.jump,
+        block: kbInput.block || touch.block,
+        punch: kbInput.punch || touch.punch,
+        kick: kbInput.kick || touch.kick,
+      };
+    }
+
+    return kbInput;
+  }
+
+  private getP2Input(): FighterInput {
+    return {
+      left: this.keyLeft.isDown,
+      right: this.keyRight.isDown,
+      jump: this.keyUp.isDown,
+      block: this.keyDown.isDown,
+      punch: this.keyK.isDown,
+      kick: this.keyL.isDown,
+    };
+  }
+
+  update(_time: number, delta: number): void {
+    if (!this.roundActive) return;
+
+    // Update fighters with input
+    const p1Input = this.getP1Input();
+    const p2Input = this.getP2Input();
+
+    this.p1.update(delta, p1Input, this.p2);
+    this.p2.update(delta, p2Input, this.p1);
+
+    // Check attack hits each frame during active attack windows
+    this.p1.checkAttackHit(this.p2);
+    this.p2.checkAttackHit(this.p1);
+
+    // Update HP bars
+    this.updateHpBar(this.p1HpBar, this.p1.hp);
+    this.updateHpBar(this.p2HpBar, this.p2.hp);
+
+    // Check for KO
+    if (this.p1.isKO || this.p2.isKO) {
+      // Small delay before ending round for dramatic effect
+      this.roundActive = false;
+      if (this.timerEvent) {
+        this.timerEvent.destroy();
+      }
+      this.time.delayedCall(800, () => {
+        this.endRound();
       });
     }
   }
 
-  update(): void {
-    if (!this.roundActive) return;
+  private updateHpBar(bar: Phaser.GameObjects.Rectangle, hp: number): void {
+    const ratio = hp / MAX_HP;
+    bar.width = ratio * 250;
 
-    const p1Speed = CHARACTERS[this.p1Character].speed;
-    const p2Speed = CHARACTERS[this.p2Character].speed;
+    // Color: green -> yellow -> red
+    if (ratio > 0.5) {
+      bar.fillColor = 0x44cc44; // green
+    } else if (ratio > 0.25) {
+      bar.fillColor = 0xcccc44; // yellow
+    } else {
+      bar.fillColor = 0xcc4444; // red
+    }
+  }
 
-    // P1 movement (WASD)
-    this.p1VelX = 0;
-    if (this.keyA.isDown) this.p1VelX = -p1Speed;
-    if (this.keyD.isDown) this.p1VelX = p1Speed;
-
-    this.p1.x += this.p1VelX * (1 / 60);
-
-    // P2 movement (Arrows)
-    this.p2VelX = 0;
-    if (this.keyLeft.isDown) this.p2VelX = -p2Speed;
-    if (this.keyRight.isDown) this.p2VelX = p2Speed;
-
-    this.p2.x += this.p2VelX * (1 / 60);
-
-    // Clamp positions to screen bounds
-    this.p1.x = Phaser.Math.Clamp(this.p1.x, 20, GAME_WIDTH - 20);
-    this.p2.x = Phaser.Math.Clamp(this.p2.x, 20, GAME_WIDTH - 20);
-
-    // Update HP bars
-    this.p1HpBar.width = (this.p1Hp / MAX_HP) * 250;
-    this.p2HpBar.width = (this.p2Hp / MAX_HP) * 250;
+  shutdown(): void {
+    this.cleanUp();
   }
 }

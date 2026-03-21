@@ -10,20 +10,17 @@ const config: Phaser.Types.Core.GameConfig = {
   height: GAME_HEIGHT,
   parent: 'game-container',
   pixelArt: true,
-  physics: {
-    default: 'arcade',
-    arcade: {
-      gravity: { x: 0, y: 0 },
-      debug: false,
-    },
-  },
   scene: [StartScene, CharacterSelectScene, FightScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
+  input: {
+    touch: true,
+  },
 };
 
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
+(window as unknown as Record<string, unknown>).__PHASER_GAME__ = game;
 
 export { SCENES };

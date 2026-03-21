@@ -21,14 +21,26 @@ export const DAMAGE = {
   SPECIAL: 20,
 } as const;
 
+// Combat tuning
+export const BLOCK_REDUCTION = 0.8;
+export const AERIAL_BONUS = 4;
+export const ATTACK_COOLDOWN = 400; // ms before next attack
+export const ATTACK_DURATION = 200; // ms attack hitbox is active
+export const HIT_STUN_DURATION = 300; // ms invulnerability after being hit
+
+// Fighter dimensions
+export const FIGHTER_WIDTH = 40;
+export const FIGHTER_HEIGHT = 60;
+export const HITBOX_WIDTH = 45; // attack hitbox extends in front
+export const HITBOX_HEIGHT = 40;
+
 // Character stats
 export interface CharacterStats {
   name: string;
   hp: number;
   speed: number;
-  punchDamage: number;
-  kickDamage: number;
   color: number;
+  power: number; // damage multiplier
 }
 
 export const CHARACTERS: Record<string, CharacterStats> = {
@@ -36,33 +48,29 @@ export const CHARACTERS: Record<string, CharacterStats> = {
     name: 'Sausage',
     hp: MAX_HP,
     speed: 220,
-    punchDamage: 7,
-    kickDamage: 11,
     color: 0xcc6633,
+    power: 0.8,
   },
   burger: {
     name: 'Burger',
     hp: MAX_HP,
     speed: 160,
-    punchDamage: 10,
-    kickDamage: 15,
     color: 0xcc9933,
+    power: 1.3,
   },
   bacon: {
     name: 'Bacon',
     hp: MAX_HP,
     speed: 240,
-    punchDamage: 6,
-    kickDamage: 10,
     color: 0xff6666,
+    power: 1.0,
   },
   cheese: {
     name: 'Cheese',
     hp: MAX_HP,
     speed: 200,
-    punchDamage: 8,
-    kickDamage: 13,
     color: 0xffcc00,
+    power: 1.0,
   },
 } as const;
 

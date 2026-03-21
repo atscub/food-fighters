@@ -192,4 +192,8 @@ export class CharacterSelectScene extends Phaser.Scene {
       });
     }
   }
+
+  shutdown(): void {
+    this.input.keyboard?.removeAllKeys(true);
+  }
 }
