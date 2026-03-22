@@ -72,6 +72,10 @@ export class FightScene extends Phaser.Scene {
   // Controls help overlay
   private helpOverlay: Phaser.GameObjects.Container | null = null;
   private keyH!: Phaser.Input.Keyboard.Key;
+  private keyEsc!: Phaser.Input.Keyboard.Key;
+
+  // Winner screen objects for cleanup
+  private winnerScreenObjects: Phaser.GameObjects.GameObject[] = [];
 
   constructor() {
     super({ key: SCENES.FIGHT });
@@ -251,6 +255,13 @@ export class FightScene extends Phaser.Scene {
     this.keyL = kb.addKey(Phaser.Input.Keyboard.KeyCodes.L);
     this.keyH = kb.addKey(Phaser.Input.Keyboard.KeyCodes.H);
     this.keyH.on('down', () => this.toggleHelp());
+
+    this.keyEsc = kb.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    this.keyEsc.on('down', () => {
+      soundManager.stopBGM();
+      this.cleanUp();
+      this.scene.start(SCENES.CHARACTER_SELECT);
+    });
   }
 
   private toggleHelp(): void {
@@ -416,27 +427,97 @@ export class FightScene extends Phaser.Scene {
     // Stop background music when match ends
     soundManager.stopBGM();
 
+    // Disable ESC during winner screen so it doesn't conflict with ENTER handler
+    this.keyEsc.removeAllListeners();
+
     let winnerLabel: string;
+    let winnerCharKey: string;
     if (this.p1Wins > this.p2Wins) {
       winnerLabel = 'P1';
+      winnerCharKey = this.p1Character;
     } else if (this.p2Wins > this.p1Wins) {
       winnerLabel = 'P2';
+      winnerCharKey = this.p2Character;
     } else {
       winnerLabel = 'NOBODY';
+      winnerCharKey = this.p1Character;
     }
 
+    this.winnerScreenObjects = [];
+
+    // Dark overlay
+    const overlay = this.add
+      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000)
+      .setAlpha(0.7)
+      .setDepth(40);
+    this.winnerScreenObjects.push(overlay);
+
+    // Winner label text at higher position
     const winText = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, `${winnerLabel} WINS!`, {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60, `${winnerLabel} WINS!`, {
         fontSize: '48px',
         fontFamily: 'monospace',
         color: '#ffcc00',
         fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 5,
       })
       .setOrigin(0.5)
-      .setDepth(50);
+      .setDepth(41);
+    this.winnerScreenObjects.push(winText);
 
-    this.time.delayedCall(3000, () => {
-      winText.destroy();
+    // Winning character idle sprite centered below the text
+    const idleKey = animSpriteKey(winnerCharKey, 'idle');
+    const winnerSprite = this.add
+      .sprite(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 30, idleKey)
+      .setScale(1.5, 1.5)
+      .setDepth(41);
+    if (this.anims.exists(idleKey)) {
+      winnerSprite.play(idleKey);
+    }
+    this.winnerScreenObjects.push(winnerSprite);
+
+    // Score text
+    const scoreText = this.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 110, `${this.p1Wins} - ${this.p2Wins}`, {
+        fontSize: '28px',
+        fontFamily: 'monospace',
+        color: '#ffffff',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 4,
+      })
+      .setOrigin(0.5)
+      .setDepth(41);
+    this.winnerScreenObjects.push(scoreText);
+
+    // Blinking "Press ENTER" prompt at bottom
+    const promptText = this.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 155, 'Press ENTER to rematch', {
+        fontSize: '18px',
+        fontFamily: 'monospace',
+        color: '#aaffaa',
+        stroke: '#000000',
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5)
+      .setDepth(41);
+    this.winnerScreenObjects.push(promptText);
+
+    this.tweens.add({
+      targets: promptText,
+      alpha: 0,
+      duration: 500,
+      ease: 'Linear',
+      yoyo: true,
+      repeat: -1,
+    });
+
+    // Listen once for ENTER to go to character select
+    const enterKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+    enterKey.once('down', () => {
+      this.winnerScreenObjects.forEach((obj) => obj.destroy());
+      this.winnerScreenObjects = [];
       this.cleanUp();
       this.scene.start(SCENES.CHARACTER_SELECT);
     });

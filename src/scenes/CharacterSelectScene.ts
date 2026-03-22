@@ -128,6 +128,60 @@ export class CharacterSelectScene extends Phaser.Scene {
         .setOrigin(0.5);
     });
 
+    // Stat bars under each character name
+    const maxBarWidth = 60;
+    const barHeight = 6;
+    const barBaseY = GAME_HEIGHT / 2 + 24;
+    const barSpacingY = 14;
+
+    CHARACTER_KEYS.forEach((key, i) => {
+      const char = CHARACTERS[key];
+      const cx = startX + i * spacing;
+
+      // PWR bar (power ranges 0.8–1.3, normalize with offset 0.5, range 1.0)
+      const pwrFill = Math.min(1, Math.max(0, (char.power - 0.5) / 1.0));
+      const pwrBarWidth = pwrFill * maxBarWidth;
+      const pwrBarX = cx - maxBarWidth / 2;
+
+      // PWR label
+      this.add.text(pwrBarX, barBaseY - 2, 'PWR', {
+        fontSize: '8px',
+        fontFamily: 'monospace',
+        color: '#ff9999',
+      }).setOrigin(0, 1).setDepth(5);
+
+      // PWR bg
+      this.add.rectangle(cx, barBaseY, maxBarWidth, barHeight, 0x442222)
+        .setOrigin(0.5, 0).setDepth(5);
+      // PWR fill
+      if (pwrBarWidth > 0) {
+        this.add.rectangle(pwrBarX, barBaseY, pwrBarWidth, barHeight, 0xff4444)
+          .setOrigin(0, 0).setDepth(6);
+      }
+
+      // SPD bar (speed ranges 160–240, normalize with offset 100, range 200)
+      const spdFill = Math.min(1, Math.max(0, (char.speed - 100) / 200));
+      const spdBarWidth = spdFill * maxBarWidth;
+      const spdBarY = barBaseY + barSpacingY;
+      const spdBarX = cx - maxBarWidth / 2;
+
+      // SPD label
+      this.add.text(spdBarX, spdBarY - 2, 'SPD', {
+        fontSize: '8px',
+        fontFamily: 'monospace',
+        color: '#9999ff',
+      }).setOrigin(0, 1).setDepth(5);
+
+      // SPD bg
+      this.add.rectangle(cx, spdBarY, maxBarWidth, barHeight, 0x222244)
+        .setOrigin(0.5, 0).setDepth(5);
+      // SPD fill
+      if (spdBarWidth > 0) {
+        this.add.rectangle(spdBarX, spdBarY, spdBarWidth, barHeight, 0x4444ff)
+          .setOrigin(0, 0).setDepth(6);
+      }
+    });
+
     // P1 selection indicator
     this.p1Text = this.add
       .text(0, GAME_HEIGHT / 2 + 40, 'P1', {
@@ -240,6 +294,12 @@ export class CharacterSelectScene extends Phaser.Scene {
         soundManager.playConfirm();
         this.checkBothConfirmed();
       }
+    });
+
+    // ESC returns to start menu
+    const keyEsc = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    keyEsc.on('down', () => {
+      this.scene.start(SCENES.START);
     });
   }
 
