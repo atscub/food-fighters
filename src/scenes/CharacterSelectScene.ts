@@ -198,6 +198,13 @@ export class CharacterSelectScene extends Phaser.Scene {
         this.add.rectangle(spdBarX, spdBarY, spdBarWidth, barHeight, 0x4444ff)
           .setOrigin(0, 0).setDepth(6);
       }
+
+      // Ability description
+      this.add.text(cx, spdBarY + barHeight + 8, char.abilityDesc, {
+        fontSize: '9px',
+        fontFamily: 'monospace',
+        color: '#aaaaaa',
+      }).setOrigin(0.5, 0).setDepth(5);
     });
 
     // P1 selection indicator

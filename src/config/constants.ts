@@ -55,6 +55,8 @@ export interface CharacterStats {
   color: number;
   power: number; // damage multiplier
   spriteKey: string; // key used for the idle spritesheet texture
+  ability: string;
+  abilityDesc: string;
 }
 
 export const CHARACTERS: Record<string, CharacterStats> = {
@@ -65,6 +67,8 @@ export const CHARACTERS: Record<string, CharacterStats> = {
     color: 0xcc6633,
     power: 0.8,
     spriteKey: 'sausage-idle',
+    ability: 'quickRecovery',
+    abilityDesc: 'Quick Recovery: Faster cooldowns',
   },
   burger: {
     name: 'Burger',
@@ -73,6 +77,8 @@ export const CHARACTERS: Record<string, CharacterStats> = {
     color: 0xcc9933,
     power: 1.3,
     spriteKey: 'burger-idle',
+    ability: 'heavyHitter',
+    abilityDesc: 'Heavy Hitter: Extra knockback',
   },
   bacon: {
     name: 'Bacon',
@@ -81,6 +87,8 @@ export const CHARACTERS: Record<string, CharacterStats> = {
     color: 0xff6666,
     power: 1.0,
     spriteKey: 'bacon-idle',
+    ability: 'agile',
+    abilityDesc: 'Agile: Can double jump',
   },
   cheese: {
     name: 'Cheese',
@@ -89,6 +97,8 @@ export const CHARACTERS: Record<string, CharacterStats> = {
     color: 0xffcc00,
     power: 1.0,
     spriteKey: 'cheese-idle',
+    ability: 'counterShield',
+    abilityDesc: 'Counter: Block reflects damage',
   },
 } as const;
 

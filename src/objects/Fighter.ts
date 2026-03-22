@@ -72,6 +72,9 @@ export class Fighter {
   private currentAnimState: AnimState = 'idle';
   private prevAnimState: AnimState | null = null;
 
+  // Passive ability state
+  private hasDoubleJump = false;
+
   // Track whether input was already pressed (for edge-trigger)
   private prevPunch = false;
   private prevKick = false;
@@ -190,6 +193,7 @@ export class Fighter {
     this.prevJump = false;
     this.currentAttackType = null;
     this.hasHitThisAttack = false;
+    this.hasDoubleJump = false;
 
     // Reset sprite and animation state
     this.currentAnimState = 'idle';
@@ -283,11 +287,17 @@ export class Fighter {
 
     // --- Jump (edge-triggered) ---
     this.jumpedThisFrame = false;
-    if (canAct && input.jump && !this.prevJump && this.onGround) {
-      this.velY = JUMP_VELOCITY;
-      this.onGround = false;
-      this.state = 'jumping';
-      this.jumpedThisFrame = true;
+    if (canAct && input.jump && !this.prevJump) {
+      if (this.onGround) {
+        this.velY = JUMP_VELOCITY;
+        this.onGround = false;
+        this.state = 'jumping';
+        this.jumpedThisFrame = true;
+      } else if (this.stats.ability === 'agile' && !this.hasDoubleJump) {
+        this.velY = JUMP_VELOCITY;
+        this.hasDoubleJump = true;
+        this.jumpedThisFrame = true;
+      }
     }
 
     // --- Gravity ---
@@ -304,6 +314,7 @@ export class Fighter {
       this.y = GROUND_Y;
       this.velY = 0;
       this.onGround = true;
+      this.hasDoubleJump = false;
       if (this.state === 'jumping') {
         this.state = 'idle';
       }
@@ -361,7 +372,8 @@ export class Fighter {
   private startAttack(type: AttackType): void {
     this.state = type === 'punch' ? 'punching' : 'kicking';
     this.attackTimer = ATTACK_DURATION;
-    this.cooldownTimer = ATTACK_COOLDOWN;
+    this.cooldownTimer =
+      this.stats.ability === 'quickRecovery' ? ATTACK_COOLDOWN * 0.75 : ATTACK_COOLDOWN;
     this.currentAttackType = type;
     this.hasHitThisAttack = false;
   }
@@ -386,9 +398,16 @@ export class Fighter {
         isBlocking,
       });
       const kbDir = this.facingRight ? 1 : -1;
-      opponent.takeDamage(dmg, kbDir);
+      const kbMult = this.stats.ability === 'heavyHitter' ? 1.5 : 1;
+      opponent.takeDamage(dmg, kbDir * kbMult);
       this.hasHitThisAttack = true;
-      return isBlocking ? 'blocked' : 'hit';
+      if (isBlocking) {
+        if (opponent.stats.ability === 'counterShield' && this.hitStunTimer <= 0) {
+          this.takeDamage(3);
+        }
+        return 'blocked';
+      }
+      return 'hit';
     }
 
     return 'none';
@@ -427,7 +446,8 @@ export class Fighter {
       this.velX = 0;
       this.velY = 0;
     } else {
-      this.hitStunTimer = HIT_STUN_DURATION;
+      this.hitStunTimer =
+        this.stats.ability === 'quickRecovery' ? HIT_STUN_DURATION * 0.75 : HIT_STUN_DURATION;
       this.state = 'hitstun';
       this.velX = (knockbackDir || 0) * 150;
     }
