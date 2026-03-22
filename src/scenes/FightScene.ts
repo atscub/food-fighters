@@ -51,6 +51,7 @@ export class FightScene extends Phaser.Scene {
   private p2Character = 'burger';
   private roundActive = false;
   private _roundEnded = false;
+  private _cleanedUp = false;
 
   // Keyboard keys
   private keyW!: Phaser.Input.Keyboard.Key;
@@ -86,6 +87,7 @@ export class FightScene extends Phaser.Scene {
   private p1ComboCount = 0;
   private p2ComboCount = 0;
   private comboText: Phaser.GameObjects.Text | null = null;
+  private comboResetTimer: Phaser.Time.TimerEvent | null = null;
 
   constructor() {
     super({ key: SCENES.FIGHT });
@@ -97,6 +99,7 @@ export class FightScene extends Phaser.Scene {
     this.round = 1;
     this.p1Wins = 0;
     this.p2Wins = 0;
+    this._cleanedUp = false;
   }
 
   preload(): void {
@@ -419,6 +422,10 @@ export class FightScene extends Phaser.Scene {
       this.comboText.destroy();
       this.comboText = null;
     }
+    if (this.comboResetTimer) {
+      this.comboResetTimer.destroy();
+      this.comboResetTimer = null;
+    }
 
     // Start background music on first round, resume if stopped
     soundManager.playBGM();
@@ -566,12 +573,13 @@ export class FightScene extends Phaser.Scene {
 
     // Winning character idle sprite centered below the text
     const idleKey = animSpriteKey(winnerCharKey, 'idle');
+    const idleAnimKey = `${idleKey}-anim`;
     const winnerSprite = this.add
       .sprite(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 30, idleKey)
       .setScale(1.5, 1.5)
       .setDepth(41);
-    if (this.anims.exists(idleKey)) {
-      winnerSprite.play(idleKey);
+    if (this.anims.exists(idleAnimKey)) {
+      winnerSprite.play(idleAnimKey);
     }
     this.winnerScreenObjects.push(winnerSprite);
 
@@ -644,6 +652,8 @@ export class FightScene extends Phaser.Scene {
   }
 
   private cleanUp(): void {
+    if (this._cleanedUp) return;
+    this._cleanedUp = true;
     this.p1.destroy();
     this.p2.destroy();
     this.touchControls.destroy();
@@ -654,6 +664,10 @@ export class FightScene extends Phaser.Scene {
     if (this.pauseOverlay) {
       this.pauseOverlay.destroy();
       this.pauseOverlay = null;
+    }
+    if (this.comboResetTimer) {
+      this.comboResetTimer.destroy();
+      this.comboResetTimer = null;
     }
     this.paused = false;
   }
@@ -736,10 +750,22 @@ export class FightScene extends Phaser.Scene {
       this.p1ComboCount++;
       this.p2ComboCount = 0;
       this.updateComboDisplay(1, this.p1ComboCount);
+      if (this.comboResetTimer) this.comboResetTimer.destroy();
+      this.comboResetTimer = this.time.delayedCall(2000, () => {
+        this.p1ComboCount = 0;
+        this.p2ComboCount = 0;
+        if (this.comboText) { this.comboText.destroy(); this.comboText = null; }
+      });
     } else if (p2HitP1) {
       this.p2ComboCount++;
       this.p1ComboCount = 0;
       this.updateComboDisplay(2, this.p2ComboCount);
+      if (this.comboResetTimer) this.comboResetTimer.destroy();
+      this.comboResetTimer = this.time.delayedCall(2000, () => {
+        this.p1ComboCount = 0;
+        this.p2ComboCount = 0;
+        if (this.comboText) { this.comboText.destroy(); this.comboText = null; }
+      });
     }
 
     // Floating damage numbers
@@ -922,7 +948,8 @@ export class FightScene extends Phaser.Scene {
     const ratio = hp / MAX_HP;
     const targetWidth = ratio * 250;
 
-    // Animate bar width with a tween (Phaser overwrites existing tweens on same target+property)
+    // Kill any running tween on this bar before starting a new one
+    this.tweens.killTweensOf(bar);
     this.tweens.add({
       targets: bar,
       width: targetWidth,
