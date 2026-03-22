@@ -170,7 +170,7 @@ export class Fighter {
     this.body.setStrokeStyle(0);
 
     // Shadow ellipse under the fighter
-    this.shadow = scene.add.ellipse(x, GROUND_Y + 2, FIGHTER_WIDTH * 1.2, 12, 0x000000, 0.3);
+    this.shadow = scene.add.ellipse(x, GROUND_Y + 2, FIGHTER_WIDTH * 1.2, 12, 0x000000, 0.5);
     this.shadow.setDepth(depth - 1);
 
     // If sprite is available, hide the rectangle
@@ -210,7 +210,7 @@ export class Fighter {
     }
 
     this.shadow.setScale(1, 1);
-    this.shadow.setAlpha(0.3);
+    this.shadow.setAlpha(0.5);
 
     this.syncGraphics();
   }
@@ -496,10 +496,10 @@ export class Fighter {
     } else if (!this.onGround) {
       const heightRatio = Math.max(0.3, 1 - (GROUND_Y - this.y) / 200);
       this.shadow.setScale(heightRatio, heightRatio);
-      this.shadow.setAlpha(0.3 * heightRatio);
+      this.shadow.setAlpha(0.5 * heightRatio);
     } else {
       this.shadow.setScale(1, 1);
-      this.shadow.setAlpha(0.3);
+      this.shadow.setAlpha(0.5);
     }
 
     this.body.setPosition(this.x, this.y - FIGHTER_HEIGHT / 2);
