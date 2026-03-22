@@ -196,7 +196,10 @@ export class Fighter {
 
   /** Process input and physics for one frame */
   update(dt: number, input: FighterInput, opponent: Fighter): void {
-    if (this.state === 'ko') return;
+    if (this.state === 'ko') {
+      this.syncGraphics();
+      return;
+    }
 
     const dtSec = dt / 1000;
 

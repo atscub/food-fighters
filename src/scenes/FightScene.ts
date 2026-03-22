@@ -68,6 +68,10 @@ export class FightScene extends Phaser.Scene {
   // Touch controls
   private touchControls!: TouchControls;
 
+  // Controls help overlay
+  private helpOverlay: Phaser.GameObjects.Container | null = null;
+  private keyH!: Phaser.Input.Keyboard.Key;
+
   constructor() {
     super({ key: SCENES.FIGHT });
   }
@@ -207,6 +211,11 @@ export class FightScene extends Phaser.Scene {
     // Setup touch controls
     this.touchControls = new TouchControls(this);
 
+    // Help hint
+    this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 10, 'Press H for controls', {
+      fontSize: '10px', fontFamily: 'monospace', color: '#666666',
+    }).setOrigin(0.5).setDepth(22);
+
     // Show "Round 1" then "FIGHT!" then start
     this.showRoundIntro();
   }
@@ -226,6 +235,46 @@ export class FightScene extends Phaser.Scene {
     this.keyRight = kb.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT);
     this.keyK = kb.addKey(Phaser.Input.Keyboard.KeyCodes.K);
     this.keyL = kb.addKey(Phaser.Input.Keyboard.KeyCodes.L);
+    this.keyH = kb.addKey(Phaser.Input.Keyboard.KeyCodes.H);
+    this.keyH.on('down', () => this.toggleHelp());
+  }
+
+  private toggleHelp(): void {
+    if (this.helpOverlay) {
+      this.helpOverlay.destroy();
+      this.helpOverlay = null;
+      return;
+    }
+
+    const cx = GAME_WIDTH / 2;
+    const cy = GAME_HEIGHT / 2;
+
+    const bg = this.add.rectangle(cx, cy, 500, 320, 0x000000, 0.85).setOrigin(0.5);
+
+    const title = this.add.text(cx, cy - 140, 'CONTROLS', {
+      fontSize: '24px', fontFamily: 'monospace', color: '#ffcc00', fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    const lines = [
+      '       Player 1          Player 2',
+      '',
+      'Move   A / D              \u2190 / \u2192',
+      'Jump   W                  \u2191',
+      'Block  S                  \u2193',
+      'Punch  F                  K',
+      'Kick   G                  L',
+      '',
+      'Jump over your opponent to get behind them!',
+      '',
+      'Press H to close',
+    ];
+
+    const body = this.add.text(cx, cy + 10, lines.join('\n'), {
+      fontSize: '13px', fontFamily: 'monospace', color: '#ffffff',
+      lineSpacing: 4, align: 'center',
+    }).setOrigin(0.5);
+
+    this.helpOverlay = this.add.container(0, 0, [bg, title, body]).setDepth(100);
   }
 
   private showRoundIntro(): void {
@@ -367,6 +416,10 @@ export class FightScene extends Phaser.Scene {
     this.p1.destroy();
     this.p2.destroy();
     this.touchControls.destroy();
+    if (this.helpOverlay) {
+      this.helpOverlay.destroy();
+      this.helpOverlay = null;
+    }
   }
 
   /** Read keyboard state and merge with touch for P1 */
