@@ -456,10 +456,15 @@ export class Fighter {
         this.prevAnimState = targetAnimState;
       }
 
-      // Flash during hitstun
+      // Flash during hitstun: alternate red tint / normal color
       if (this.state === 'hitstun') {
-        this.sprite.setAlpha(Math.sin(Date.now() * 0.02) > 0 ? 1 : 0.3);
-        this.sprite.clearTint();
+        if (Math.sin(Date.now() * 0.02) > 0) {
+          this.sprite.setTint(0xff0000);
+          this.sprite.setAlpha(1);
+        } else {
+          this.sprite.clearTint();
+          this.sprite.setAlpha(0.5);
+        }
       } else if (this.state === 'ko') {
         this.sprite.setAlpha(0.4);
         this.sprite.clearTint();

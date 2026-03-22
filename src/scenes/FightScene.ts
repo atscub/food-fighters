@@ -490,6 +490,8 @@ export class FightScene extends Phaser.Scene {
     // Sound effects for hits / blocks
     if (p1Result === 'hit' || p2Result === 'hit') {
       soundManager.playHit();
+      this.cameras.main.shake(100, 0.005);
+      this.flashScreen();
     } else if (p1Result === 'blocked' || p2Result === 'blocked') {
       soundManager.playBlock();
     }
@@ -506,6 +508,7 @@ export class FightScene extends Phaser.Scene {
     // Check for KO
     if (this.p1.isKO || this.p2.isKO) {
       soundManager.playKO();
+      this.cameras.main.shake(300, 0.01);
       // Small delay before ending round for dramatic effect
       this.roundActive = false;
       if (this.timerEvent) {
@@ -515,6 +518,22 @@ export class FightScene extends Phaser.Scene {
         this.endRound();
       });
     }
+  }
+
+  private flashScreen(): void {
+    const flash = this.add
+      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0xffffff)
+      .setAlpha(0.3)
+      .setDepth(15);
+    this.tweens.add({
+      targets: flash,
+      alpha: 0,
+      duration: 100,
+      ease: 'Linear',
+      onComplete: () => {
+        flash.destroy();
+      },
+    });
   }
 
   private updateHpBar(bar: Phaser.GameObjects.Rectangle, hp: number): void {
