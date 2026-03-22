@@ -334,8 +334,9 @@ export class Fighter {
     }
 
     // --- Push-back collision with opponent (only when at similar height) ---
+    // Allow 20% overlap on each side (60% of full width as minimum distance)
     const verticalGap = Math.abs(this.y - opponent.y);
-    const minDist = FIGHTER_WIDTH;
+    const minDist = FIGHTER_WIDTH * 0.6;
     const dist = Math.abs(this.x - opponent.x);
     if (dist < minDist && dist > 0 && verticalGap < FIGHTER_HEIGHT * 0.7) {
       const overlap = minDist - dist;
@@ -421,12 +422,15 @@ export class Fighter {
     return 'none';
   }
 
-  /** Simple rectangle overlap: hitbox (in front of attacker) vs defender hurtbox */
+  /** Check if attack connects — requires fighters' bodies to overlap.
+   *  Attack hitbox starts slightly inside the attacker's body edge so
+   *  fighters must be close enough for their bounding boxes to intersect. */
   private attackHits(opponent: Fighter): boolean {
-    // Attacker hitbox
+    // Attacker hitbox: starts 20% inside the body edge, extends a small amount outward
+    const overlap20 = FIGHTER_WIDTH * 0.2; // 20% of body width
     const hbX = this.facingRight
-      ? this.x + FIGHTER_WIDTH / 2
-      : this.x - FIGHTER_WIDTH / 2 - HITBOX_WIDTH;
+      ? this.x + FIGHTER_WIDTH / 2 - overlap20
+      : this.x - FIGHTER_WIDTH / 2 + overlap20 - HITBOX_WIDTH;
     const hbY = this.y - FIGHTER_HEIGHT / 2;
 
     // Defender hurtbox (their body)
