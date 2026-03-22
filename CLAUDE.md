@@ -31,3 +31,12 @@ A 2D browser fighting game with cartoonish food characters.
 - Phaser 3 API only (no Phaser 2/CE)
 - All game constants in src/config/
 - Test non-rendering logic with Vitest
+
+## Asset Generation Rules
+- Use the asset-generator subagent for Gemini sprite generation — it uses playwright-chrome MCP
+- Always use **Gemini Pro** mode (not Fast) — Pro reverts on each new conversation, must re-select
+- Use green screen (#00FF00) background for chroma keying, not magenta
+- Do NOT accept sprites with text/labels, wrong grid layout, or inconsistent characters — iterate on the prompt
+- All sprite states for a character must be generated in a single prompt for consistency
+- Post-process with `scripts/process_spritesheet.py` which handles chroma key, auto-trim, and grid splitting
+- When the human says proceed, go all the way without asking for confirmation at each step
