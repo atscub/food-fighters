@@ -68,7 +68,7 @@ export const CHARACTERS: Record<string, CharacterStats> = {
     power: 0.8,
     spriteKey: 'sausage-idle',
     ability: 'quickRecovery',
-    abilityDesc: 'Quick Recovery: Faster cooldowns',
+    abilityDesc: 'Fast cooldowns',
   },
   burger: {
     name: 'Burger',
@@ -78,7 +78,7 @@ export const CHARACTERS: Record<string, CharacterStats> = {
     power: 1.3,
     spriteKey: 'burger-idle',
     ability: 'heavyHitter',
-    abilityDesc: 'Heavy Hitter: Extra knockback',
+    abilityDesc: 'Extra knockback',
   },
   bacon: {
     name: 'Bacon',
@@ -88,7 +88,7 @@ export const CHARACTERS: Record<string, CharacterStats> = {
     power: 1.0,
     spriteKey: 'bacon-idle',
     ability: 'agile',
-    abilityDesc: 'Agile: Can double jump',
+    abilityDesc: 'Double jump',
   },
   cheese: {
     name: 'Cheese',
@@ -98,7 +98,7 @@ export const CHARACTERS: Record<string, CharacterStats> = {
     power: 1.0,
     spriteKey: 'cheese-idle',
     ability: 'counterShield',
-    abilityDesc: 'Counter: Block reflects damage',
+    abilityDesc: 'Block reflects dmg',
   },
 } as const;
 

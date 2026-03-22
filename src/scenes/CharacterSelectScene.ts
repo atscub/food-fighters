@@ -342,8 +342,8 @@ export class CharacterSelectScene extends Phaser.Scene {
     const startX = 120;
     const spacing = 180;
     // Box dimensions relative to sprite position (sprites sit at GAME_HEIGHT/2 - 80)
-    const boxHalfW = 54;
-    const boxHalfH = 62;
+    const boxHalfW = 50;
+    const boxHalfH = 52;
     const spriteBaseY = GAME_HEIGHT / 2 - 80;
 
     this.p1Text.setX(startX + this.p1Index * spacing);
