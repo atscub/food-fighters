@@ -7,6 +7,7 @@ import {
   CHARACTERS,
   SPRITE_FRAME_WIDTH,
   SPRITE_FRAME_HEIGHT,
+  animSpriteKey,
 } from '../config/constants';
 import { soundManager } from '../audio/SoundManager';
 
@@ -21,17 +22,26 @@ export class CharacterSelectScene extends Phaser.Scene {
   private p2ConfirmText!: Phaser.GameObjects.Text;
   private characterLabels: Phaser.GameObjects.Text[] = [];
   private characterSprites: Phaser.GameObjects.Sprite[] = [];
+  private p1SelectTween: Phaser.Tweens.Tween | null = null;
+  private p2SelectTween: Phaser.Tweens.Tween | null = null;
 
   constructor() {
     super({ key: SCENES.CHARACTER_SELECT });
   }
 
   preload(): void {
-    // Load all character spritesheets for previews
+    // Load idle and walk spritesheets for all characters
     CHARACTER_KEYS.forEach((key) => {
       const stats = CHARACTERS[key];
       if (!this.textures.exists(stats.spriteKey)) {
         this.load.spritesheet(stats.spriteKey, `assets/sprites/${stats.spriteKey}.png`, {
+          frameWidth: SPRITE_FRAME_WIDTH,
+          frameHeight: SPRITE_FRAME_HEIGHT,
+        });
+      }
+      const walkKey = animSpriteKey(key, 'walk');
+      if (!this.textures.exists(walkKey)) {
+        this.load.spritesheet(walkKey, `assets/sprites/${walkKey}.png`, {
           frameWidth: SPRITE_FRAME_WIDTH,
           frameHeight: SPRITE_FRAME_HEIGHT,
         });
@@ -88,7 +98,7 @@ export class CharacterSelectScene extends Phaser.Scene {
       const posX = startX + i * spacing;
       const posY = GAME_HEIGHT / 2 - 60;
 
-      // Create idle animation if texture is available
+      // Create idle and walk animations if texture is available
       if (this.textures.exists(spriteKey) && this.textures.get(spriteKey).key !== '__MISSING') {
         const animKey = `${spriteKey}-anim`;
         if (!this.anims.exists(animKey)) {
@@ -100,11 +110,19 @@ export class CharacterSelectScene extends Phaser.Scene {
           });
         }
 
-        // Scale to a nice preview size (~64px tall)
-        const previewHeight = 64;
-        const scale = previewHeight / SPRITE_FRAME_HEIGHT;
+        const walkKey = animSpriteKey(key, 'walk');
+        const walkAnimKey = `${walkKey}-anim`;
+        if (this.textures.exists(walkKey) && !this.anims.exists(walkAnimKey)) {
+          this.anims.create({
+            key: walkAnimKey,
+            frames: this.anims.generateFrameNumbers(walkKey, { start: 0, end: 3 }),
+            frameRate: 10,
+            repeat: -1,
+          });
+        }
+
         const spr = this.add.sprite(posX, posY, spriteKey);
-        spr.setScale(scale);
+        spr.setScale(1.5);
         spr.play(animKey);
         return spr;
       }
@@ -322,6 +340,74 @@ export class CharacterSelectScene extends Phaser.Scene {
         label.setColor('#ffffff');
       }
     });
+
+    // Update walk animation and pulse tween for each sprite
+    this.characterSprites.forEach((spr, i) => {
+      if (!spr.visible) return;
+      const key = CHARACTER_KEYS[i];
+      const idleKey = CHARACTERS[key].spriteKey;
+      const walkKey = animSpriteKey(key, 'walk');
+      const walkAnimKey = `${walkKey}-anim`;
+      const idleAnimKey = `${idleKey}-anim`;
+      const isSelected = i === this.p1Index || i === this.p2Index;
+
+      if (isSelected) {
+        // Switch to walk animation
+        if (this.textures.exists(walkKey)) {
+          if (spr.texture.key !== walkKey) {
+            spr.setTexture(walkKey);
+          }
+          if (this.anims.exists(walkAnimKey) && !spr.anims.isPlaying) {
+            spr.play(walkAnimKey);
+          } else if (this.anims.exists(walkAnimKey) && spr.anims.currentAnim?.key !== walkAnimKey) {
+            spr.play(walkAnimKey);
+          }
+        }
+        // Start pulse tween if not already running for this sprite
+        const existingTween =
+          i === this.p1Index ? this.p1SelectTween : this.p2SelectTween;
+        if (!existingTween || !existingTween.isPlaying()) {
+          const tween = this.tweens.add({
+            targets: spr,
+            scaleX: 1.6,
+            scaleY: 1.6,
+            duration: 300,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+          });
+          if (i === this.p1Index) this.p1SelectTween = tween;
+          if (i === this.p2Index) this.p2SelectTween = tween;
+        }
+      } else {
+        // Revert to idle animation
+        if (spr.texture.key !== idleKey) {
+          spr.setTexture(idleKey);
+        }
+        if (this.anims.exists(idleAnimKey) && spr.anims.currentAnim?.key !== idleAnimKey) {
+          spr.play(idleAnimKey);
+        }
+        spr.setScale(1.5);
+      }
+    });
+
+    // Stop tweens for sprites no longer selected by either player
+    if (this.p1SelectTween) {
+      const p1Spr = this.characterSprites[this.p1Index];
+      if (this.p1SelectTween.targets[0] !== p1Spr) {
+        this.p1SelectTween.stop();
+        (this.p1SelectTween.targets[0] as Phaser.GameObjects.Sprite).setScale(1.5);
+        this.p1SelectTween = null;
+      }
+    }
+    if (this.p2SelectTween) {
+      const p2Spr = this.characterSprites[this.p2Index];
+      if (this.p2SelectTween.targets[0] !== p2Spr) {
+        this.p2SelectTween.stop();
+        (this.p2SelectTween.targets[0] as Phaser.GameObjects.Sprite).setScale(1.5);
+        this.p2SelectTween = null;
+      }
+    }
   }
 
   private checkBothConfirmed(): void {
@@ -337,6 +423,10 @@ export class CharacterSelectScene extends Phaser.Scene {
 
   shutdown(): void {
     this.input.keyboard?.removeAllKeys(true);
+    this.p1SelectTween?.stop();
+    this.p2SelectTween?.stop();
+    this.p1SelectTween = null;
+    this.p2SelectTween = null;
     this.characterSprites.forEach((s) => s.destroy());
     this.characterSprites = [];
   }
