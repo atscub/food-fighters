@@ -38,8 +38,8 @@ export class FightScene extends Phaser.Scene {
   private p2HpBg!: Phaser.GameObjects.Rectangle;
   private timerText!: Phaser.GameObjects.Text;
   private roundText!: Phaser.GameObjects.Text;
-  private p1WinsText!: Phaser.GameObjects.Text;
-  private p2WinsText!: Phaser.GameObjects.Text;
+  private p1WinDots: Phaser.GameObjects.Arc[] = [];
+  private p2WinDots: Phaser.GameObjects.Arc[] = [];
 
   // Round state
   private roundTimer = ROUND_TIME;
@@ -199,28 +199,24 @@ export class FightScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(22);
 
-    // Win counters
-    this.p1WinsText = this.add
-      .text(45, 50, `Wins: ${this.p1Wins}`, {
-        fontSize: '14px',
-        fontFamily: 'monospace',
-        color: '#66aaff',
-        stroke: '#000000',
-        strokeThickness: 3,
-      })
-      .setOrigin(0)
-      .setDepth(22);
+    // Round win indicator dots
+    this.p1WinDots = [];
+    this.p2WinDots = [];
+    const p1DotXPositions = [55, 75];
+    const p2DotXPositions = [GAME_WIDTH - 55, GAME_WIDTH - 75];
+    for (let i = 0; i < WINS_NEEDED; i++) {
+      const p1Dot = this.add.arc(p1DotXPositions[i], 55, 6, 0, 360, false)
+        .setFillStyle(0x000000, 0)
+        .setStrokeStyle(2, 0x66aaff)
+        .setDepth(22);
+      this.p1WinDots.push(p1Dot);
 
-    this.p2WinsText = this.add
-      .text(GAME_WIDTH - 45, 50, `Wins: ${this.p2Wins}`, {
-        fontSize: '14px',
-        fontFamily: 'monospace',
-        color: '#ff6666',
-        stroke: '#000000',
-        strokeThickness: 3,
-      })
-      .setOrigin(1, 0)
-      .setDepth(22);
+      const p2Dot = this.add.arc(p2DotXPositions[i], 55, 6, 0, 360, false)
+        .setFillStyle(0x000000, 0)
+        .setStrokeStyle(2, 0xff6666)
+        .setDepth(22);
+      this.p2WinDots.push(p2Dot);
+    }
 
     // Setup keyboard controls
     this.setupControls();
@@ -398,9 +394,12 @@ export class FightScene extends Phaser.Scene {
     }
     // draw: no wins awarded
 
-    // Update win counter display
-    this.p1WinsText.setText(`Wins: ${this.p1Wins}`);
-    this.p2WinsText.setText(`Wins: ${this.p2Wins}`);
+    // Update round win indicator dots
+    if (outcome === 'p1') {
+      this.p1WinDots[this.p1Wins - 1].setFillStyle(0x66aaff);
+    } else if (outcome === 'p2') {
+      this.p2WinDots[this.p2Wins - 1].setFillStyle(0xff6666);
+    }
 
     // Check for match winner
     if (this.p1Wins >= WINS_NEEDED || this.p2Wins >= WINS_NEEDED) {

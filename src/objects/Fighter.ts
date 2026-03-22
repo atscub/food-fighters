@@ -63,6 +63,7 @@ export class Fighter {
 
   // Rendering
   public body: Phaser.GameObjects.Rectangle;
+  public shadow: Phaser.GameObjects.Ellipse;
   public sprite: Phaser.GameObjects.Sprite | null = null;
   private useSprite = false;
   private hitboxDebug: Phaser.GameObjects.Rectangle | null = null;
@@ -156,6 +157,10 @@ export class Fighter {
     );
     this.body.setDepth(depth);
 
+    // Shadow ellipse under the fighter
+    this.shadow = scene.add.ellipse(x, GROUND_Y + 2, FIGHTER_WIDTH * 1.2, 12, 0x000000, 0.3);
+    this.shadow.setDepth(depth - 1);
+
     // If sprite is available, hide the rectangle
     if (this.useSprite) {
       this.body.setAlpha(0);
@@ -190,6 +195,9 @@ export class Fighter {
       const baseScaleY = FIGHTER_HEIGHT / SPRITE_FRAME_HEIGHT;
       this.sprite.setScale(baseScaleX, baseScaleY);
     }
+
+    this.shadow.setScale(1, 1);
+    this.shadow.setAlpha(0.3);
 
     this.syncGraphics();
   }
@@ -436,6 +444,20 @@ export class Fighter {
   }
 
   private syncGraphics(): void {
+    // Update shadow
+    this.shadow.setPosition(this.x, GROUND_Y + 2);
+    if (this.state === 'ko') {
+      this.shadow.setScale(1.5, 1);
+      this.shadow.setAlpha(0.2);
+    } else if (!this.onGround) {
+      const heightRatio = Math.max(0.3, 1 - (GROUND_Y - this.y) / 200);
+      this.shadow.setScale(heightRatio, heightRatio);
+      this.shadow.setAlpha(0.3 * heightRatio);
+    } else {
+      this.shadow.setScale(1, 1);
+      this.shadow.setAlpha(0.3);
+    }
+
     this.body.setPosition(this.x, this.y - FIGHTER_HEIGHT / 2);
 
     if (this.useSprite && this.sprite) {
@@ -519,6 +541,7 @@ export class Fighter {
   }
 
   destroy(): void {
+    this.shadow.destroy();
     this.body.destroy();
     if (this.sprite) this.sprite.destroy();
     if (this.hitboxDebug) this.hitboxDebug.destroy();
