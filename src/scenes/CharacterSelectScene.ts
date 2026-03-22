@@ -100,7 +100,7 @@ export class CharacterSelectScene extends Phaser.Scene {
       const char = CHARACTERS[key];
       const spriteKey = char.spriteKey;
       const posX = startX + i * spacing;
-      const posY = GAME_HEIGHT / 2 - 60;
+      const posY = GAME_HEIGHT / 2 - 80;
 
       // Create idle and walk animations if texture is available
       if (this.textures.exists(spriteKey) && this.textures.get(spriteKey).key !== '__MISSING') {
@@ -126,7 +126,7 @@ export class CharacterSelectScene extends Phaser.Scene {
         }
 
         const spr = this.add.sprite(posX, posY, spriteKey);
-        spr.setScale(1.5);
+        spr.setScale(0.9);
         spr.play(animKey);
         return spr;
       }
@@ -213,7 +213,7 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     // P1 selection indicator
     this.p1Text = this.add
-      .text(0, GAME_HEIGHT / 2 + 40, 'P1', {
+      .text(0, GAME_HEIGHT / 2 + 65, 'P1', {
         fontSize: '16px',
         fontFamily: 'monospace',
         color: '#66aaff',
@@ -223,7 +223,7 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     // P2 selection indicator
     this.p2Text = this.add
-      .text(0, GAME_HEIGHT / 2 + 60, 'P2', {
+      .text(0, GAME_HEIGHT / 2 + 85, 'P2', {
         fontSize: '16px',
         fontFamily: 'monospace',
         color: '#ff6666',
@@ -341,10 +341,10 @@ export class CharacterSelectScene extends Phaser.Scene {
   private updateSelectionDisplay(): void {
     const startX = 120;
     const spacing = 180;
-    // Box dimensions relative to sprite position (sprites sit at GAME_HEIGHT/2 - 60)
+    // Box dimensions relative to sprite position (sprites sit at GAME_HEIGHT/2 - 80)
     const boxHalfW = 54;
     const boxHalfH = 62;
-    const spriteBaseY = GAME_HEIGHT / 2 - 60;
+    const spriteBaseY = GAME_HEIGHT / 2 - 80;
 
     this.p1Text.setX(startX + this.p1Index * spacing);
     this.p2Text.setX(startX + this.p2Index * spacing);
@@ -462,8 +462,8 @@ export class CharacterSelectScene extends Phaser.Scene {
         if (!existingTween || !existingTween.isPlaying()) {
           const tween = this.tweens.add({
             targets: spr,
-            scaleX: 1.6,
-            scaleY: 1.6,
+            scaleX: 0.95,
+            scaleY: 0.95,
             duration: 300,
             yoyo: true,
             repeat: -1,
@@ -480,7 +480,7 @@ export class CharacterSelectScene extends Phaser.Scene {
         if (this.anims.exists(idleAnimKey) && spr.anims.currentAnim?.key !== idleAnimKey) {
           spr.play(idleAnimKey);
         }
-        spr.setScale(1.5);
+        spr.setScale(0.9);
       }
     });
 
@@ -489,7 +489,7 @@ export class CharacterSelectScene extends Phaser.Scene {
       const p1Spr = this.characterSprites[this.p1Index];
       if (this.p1SelectTween.targets[0] !== p1Spr) {
         this.p1SelectTween.stop();
-        (this.p1SelectTween.targets[0] as Phaser.GameObjects.Sprite).setScale(1.5);
+        (this.p1SelectTween.targets[0] as Phaser.GameObjects.Sprite).setScale(0.9);
         this.p1SelectTween = null;
       }
     }
@@ -497,7 +497,7 @@ export class CharacterSelectScene extends Phaser.Scene {
       const p2Spr = this.characterSprites[this.p2Index];
       if (this.p2SelectTween.targets[0] !== p2Spr) {
         this.p2SelectTween.stop();
-        (this.p2SelectTween.targets[0] as Phaser.GameObjects.Sprite).setScale(1.5);
+        (this.p2SelectTween.targets[0] as Phaser.GameObjects.Sprite).setScale(0.9);
         this.p2SelectTween = null;
       }
     }

@@ -31,8 +31,8 @@ export const HIT_STUN_DURATION = 300; // ms invulnerability after being hit
 // Fighter dimensions
 export const FIGHTER_WIDTH = 80;
 export const FIGHTER_HEIGHT = 100;
-export const HITBOX_WIDTH = 70; // attack hitbox extends in front
-export const HITBOX_HEIGHT = 70;
+export const HITBOX_WIDTH = 35; // attack hitbox extends in front
+export const HITBOX_HEIGHT = 50;
 
 // Sprite frame dimensions (each spritesheet is 512x128 with 4 frames)
 export const SPRITE_FRAME_WIDTH = 128;
