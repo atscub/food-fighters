@@ -1,10 +1,31 @@
 import Phaser from 'phaser';
-import { GAME_WIDTH, GAME_HEIGHT, SCENES } from '../config/constants';
+import {
+  GAME_WIDTH,
+  GAME_HEIGHT,
+  SCENES,
+  CHARACTER_KEYS,
+  ANIM_STATES,
+  animSpriteKey,
+  SPRITE_FRAME_WIDTH,
+  SPRITE_FRAME_HEIGHT,
+} from '../config/constants';
 import { soundManager } from '../audio/SoundManager';
 
 export class StartScene extends Phaser.Scene {
   constructor() {
     super({ key: SCENES.START });
+  }
+
+  preload(): void {
+    CHARACTER_KEYS.forEach((charKey) => {
+      const key = animSpriteKey(charKey, ANIM_STATES[0]);
+      if (!this.textures.exists(key)) {
+        this.load.spritesheet(key, `assets/sprites/${key}.png`, {
+          frameWidth: SPRITE_FRAME_WIDTH,
+          frameHeight: SPRITE_FRAME_HEIGHT,
+        });
+      }
+    });
   }
 
   create(): void {
@@ -28,6 +49,37 @@ export class StartScene extends Phaser.Scene {
     floorBar.fillRect(0, GAME_HEIGHT - 24, GAME_WIDTH, 24);
     floorBar.fillStyle(0x4a1a1a, 1);
     floorBar.fillRect(0, GAME_HEIGHT - 26, GAME_WIDTH, 2);
+
+    // Decorative character sprites standing on the floor
+    const charXPositions = [120, 300, 500, 680];
+    const charY = GAME_HEIGHT - 60;
+    CHARACTER_KEYS.forEach((charKey, index) => {
+      const idleKey = animSpriteKey(charKey, ANIM_STATES[0]);
+      const animKey = `${idleKey}-anim-start`;
+      if (!this.anims.exists(animKey)) {
+        this.anims.create({
+          key: animKey,
+          frames: this.anims.generateFrameNumbers(idleKey, { start: 0, end: 3 }),
+          frameRate: 6,
+          repeat: -1,
+        });
+      }
+      const sprite = this.add.sprite(charXPositions[index], charY, idleKey);
+      sprite.setScale(0.8);
+      sprite.setDepth(1);
+      sprite.play(animKey);
+
+      this.tweens.add({
+        targets: sprite,
+        scaleY: 0.82,
+        scaleX: 0.8,
+        duration: 900,
+        ease: 'Sine.easeInOut',
+        yoyo: true,
+        repeat: -1,
+        delay: index * 200,
+      });
+    });
 
     // Title text
     this.add
