@@ -77,6 +77,11 @@ export class FightScene extends Phaser.Scene {
   // Winner screen objects for cleanup
   private winnerScreenObjects: Phaser.GameObjects.GameObject[] = [];
 
+  // Combo tracking
+  private p1ComboCount = 0;
+  private p2ComboCount = 0;
+  private comboText: Phaser.GameObjects.Text | null = null;
+
   constructor() {
     super({ key: SCENES.FIGHT });
   }
@@ -346,6 +351,14 @@ export class FightScene extends Phaser.Scene {
     this.timerText.setColor('#ffffff');
     this.timerText.setScale(1.0);
 
+    // Reset combo state
+    this.p1ComboCount = 0;
+    this.p2ComboCount = 0;
+    if (this.comboText) {
+      this.comboText.destroy();
+      this.comboText = null;
+    }
+
     // Start background music on first round, resume if stopped
     soundManager.playBGM();
 
@@ -405,6 +418,30 @@ export class FightScene extends Phaser.Scene {
     if (this.p1Wins >= WINS_NEEDED || this.p2Wins >= WINS_NEEDED) {
       this.showMatchWinner();
     } else if (this.round < TOTAL_ROUNDS) {
+      // Show round winner announcement before next round
+      if (outcome !== 'draw') {
+        const winnerLabel = outcome === 'p1' ? 'P1 WINS THE ROUND!' : 'P2 WINS THE ROUND!';
+        const roundWinText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, winnerLabel, {
+          fontSize: '36px',
+          fontFamily: 'monospace',
+          fontStyle: 'bold',
+          color: '#ffcc00',
+          stroke: '#000000',
+          strokeThickness: 5,
+        }).setOrigin(0.5).setDepth(50);
+
+        this.tweens.add({
+          targets: roundWinText,
+          alpha: 0,
+          duration: 400,
+          delay: 1300,
+          ease: 'Power2',
+          onComplete: () => {
+            roundWinText.destroy();
+          },
+        });
+      }
+
       this.round++;
       this.roundText.setText(`Round ${this.round}`);
 
@@ -412,8 +449,9 @@ export class FightScene extends Phaser.Scene {
       this.p1.reset(200);
       this.p2.reset(600);
 
-      // Show round intro then start
-      this.time.delayedCall(500, () => {
+      // Show round intro after announcement has had time to display
+      const introDelay = outcome !== 'draw' ? 2000 : 500;
+      this.time.delayedCall(introDelay, () => {
         this.showRoundIntro();
       });
     } else {
@@ -586,6 +624,20 @@ export class FightScene extends Phaser.Scene {
     const p1Result = this.p1.checkAttackHit(this.p2);
     const p2Result = this.p2.checkAttackHit(this.p1);
 
+    // Combo tracking
+    const p1HitP2 = p1Result === 'hit' && this.p2.hp < p2HpBefore;
+    const p2HitP1 = p2Result === 'hit' && this.p1.hp < p1HpBefore;
+
+    if (p1HitP2) {
+      this.p1ComboCount++;
+      this.p2ComboCount = 0;
+      this.updateComboDisplay(1, this.p1ComboCount);
+    } else if (p2HitP1) {
+      this.p2ComboCount++;
+      this.p1ComboCount = 0;
+      this.updateComboDisplay(2, this.p2ComboCount);
+    }
+
     // Floating damage numbers
     if (p2Result === 'hit' || p2Result === 'blocked') {
       const dmg = p1HpBefore - this.p1.hp;
@@ -630,6 +682,32 @@ export class FightScene extends Phaser.Scene {
       this.time.delayedCall(800, () => {
         this.endRound();
       });
+    }
+  }
+
+  private updateComboDisplay(player: 1 | 2, count: number): void {
+    if (count >= 2) {
+      const label = `${count} HIT COMBO!`;
+      if (!this.comboText) {
+        this.comboText = this.add.text(GAME_WIDTH / 2, 120, label, {
+          fontSize: '32px',
+          fontFamily: 'monospace',
+          fontStyle: 'bold',
+          color: '#ff8800',
+          stroke: '#000000',
+          strokeThickness: 5,
+        }).setOrigin(0.5).setDepth(35);
+      } else {
+        this.comboText.setText(label);
+        this.comboText.setAlpha(1);
+      }
+      // Tint slightly differently per player
+      this.comboText.setColor(player === 1 ? '#66aaff' : '#ff6666');
+    } else {
+      if (this.comboText) {
+        this.comboText.destroy();
+        this.comboText = null;
+      }
     }
   }
 

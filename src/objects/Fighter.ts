@@ -156,6 +156,7 @@ export class Fighter {
       stats.color,
     );
     this.body.setDepth(depth);
+    this.body.setStrokeStyle(0);
 
     // Shadow ellipse under the fighter
     this.shadow = scene.add.ellipse(x, GROUND_Y + 2, FIGHTER_WIDTH * 1.2, 12, 0x000000, 0.3);
