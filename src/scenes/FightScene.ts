@@ -589,10 +589,10 @@ export class FightScene extends Phaser.Scene {
       .setDepth(41);
     this.winnerScreenObjects.push(scoreText);
 
-    // Blinking "Press ENTER" prompt at bottom
+    // Blinking "Press ENTER" prompt
     const promptText = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 155, 'Press ENTER to rematch', {
-        fontSize: '18px',
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 155, 'Press ENTER to change characters', {
+        fontSize: '14px',
         fontFamily: 'monospace',
         color: '#aaffaa',
         stroke: '#000000',
@@ -601,6 +601,19 @@ export class FightScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(41);
     this.winnerScreenObjects.push(promptText);
+
+    // "Press R for rematch" prompt below
+    const rematchText = this.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 175, 'Press R for rematch', {
+        fontSize: '14px',
+        fontFamily: 'monospace',
+        color: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5)
+      .setDepth(41);
+    this.winnerScreenObjects.push(rematchText);
 
     this.tweens.add({
       targets: promptText,
@@ -618,6 +631,15 @@ export class FightScene extends Phaser.Scene {
       this.winnerScreenObjects = [];
       this.cleanUp();
       this.scene.start(SCENES.CHARACTER_SELECT);
+    });
+
+    // Listen once for R to rematch with same characters
+    const rematchKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+    rematchKey.once('down', () => {
+      this.winnerScreenObjects.forEach((obj) => obj.destroy());
+      this.winnerScreenObjects = [];
+      this.cleanUp();
+      this.scene.restart({ p1Character: this.p1Character, p2Character: this.p2Character });
     });
   }
 
