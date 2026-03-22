@@ -213,7 +213,7 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     // P1 selection indicator
     this.p1Text = this.add
-      .text(0, GAME_HEIGHT / 2 + 65, 'P1', {
+      .text(0, GAME_HEIGHT / 2 + 80, 'P1', {
         fontSize: '16px',
         fontFamily: 'monospace',
         color: '#66aaff',
@@ -223,7 +223,7 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     // P2 selection indicator
     this.p2Text = this.add
-      .text(0, GAME_HEIGHT / 2 + 85, 'P2', {
+      .text(0, GAME_HEIGHT / 2 + 98, 'P2', {
         fontSize: '16px',
         fontFamily: 'monospace',
         color: '#ff6666',
