@@ -24,6 +24,10 @@ export class CharacterSelectScene extends Phaser.Scene {
   private characterSprites: Phaser.GameObjects.Sprite[] = [];
   private p1SelectTween: Phaser.Tweens.Tween | null = null;
   private p2SelectTween: Phaser.Tweens.Tween | null = null;
+  private selectionGraphics!: Phaser.GameObjects.Graphics;
+  private lockedTexts: Phaser.GameObjects.Text[] = [];
+  private p1LockedText: Phaser.GameObjects.Text | null = null;
+  private p2LockedText: Phaser.GameObjects.Text | null = null;
 
   constructor() {
     super({ key: SCENES.CHARACTER_SELECT });
@@ -249,6 +253,10 @@ export class CharacterSelectScene extends Phaser.Scene {
       )
       .setOrigin(1, 0);
 
+    // Graphics layer for selection box borders (drawn below sprites)
+    this.selectionGraphics = this.add.graphics();
+    this.selectionGraphics.setDepth(2);
+
     this.updateSelectionDisplay();
 
     // P1 controls: A/D to navigate, F to confirm
@@ -279,6 +287,7 @@ export class CharacterSelectScene extends Phaser.Scene {
         this.p1ConfirmText.setText(
           `P1: ${CHARACTERS[CHARACTER_KEYS[this.p1Index]].name} LOCKED IN!`
         );
+        this.updateSelectionDisplay();
         soundManager.playConfirm();
         this.checkBothConfirmed();
       }
@@ -316,6 +325,7 @@ export class CharacterSelectScene extends Phaser.Scene {
         this.p2ConfirmText.setText(
           `P2: ${CHARACTERS[CHARACTER_KEYS[this.p2Index]].name} LOCKED IN!`
         );
+        this.updateSelectionDisplay();
         soundManager.playConfirm();
         this.checkBothConfirmed();
       }
@@ -331,14 +341,18 @@ export class CharacterSelectScene extends Phaser.Scene {
   private updateSelectionDisplay(): void {
     const startX = 120;
     const spacing = 180;
+    // Box dimensions relative to sprite position (sprites sit at GAME_HEIGHT/2 - 60)
+    const boxHalfW = 54;
+    const boxHalfH = 62;
+    const spriteBaseY = GAME_HEIGHT / 2 - 60;
 
     this.p1Text.setX(startX + this.p1Index * spacing);
     this.p2Text.setX(startX + this.p2Index * spacing);
 
-    // Highlight selected characters
+    // Highlight character name labels
     this.characterLabels.forEach((label, i) => {
       if (i === this.p1Index && i === this.p2Index) {
-        label.setColor('#ff88ff'); // Both selecting same
+        label.setColor('#ff88ff');
       } else if (i === this.p1Index) {
         label.setColor('#66aaff');
       } else if (i === this.p2Index) {
@@ -347,6 +361,78 @@ export class CharacterSelectScene extends Phaser.Scene {
         label.setColor('#ffffff');
       }
     });
+
+    // Redraw selection box graphics
+    this.selectionGraphics.clear();
+
+    const drawSelectionBox = (
+      cx: number,
+      color: number,
+      confirmed: boolean,
+    ): void => {
+      const x = cx - boxHalfW;
+      const y = spriteBaseY - boxHalfH;
+      const w = boxHalfW * 2;
+      const h = boxHalfH * 2;
+      const glowAlpha = confirmed ? 0.28 : 0.15;
+      const lineWidth = confirmed ? 4 : 3;
+
+      // Glow fill — slightly larger rectangle
+      this.selectionGraphics.fillStyle(color, glowAlpha);
+      this.selectionGraphics.fillRect(x - 4, y - 4, w + 8, h + 8);
+
+      // Border stroke
+      this.selectionGraphics.lineStyle(lineWidth, color, confirmed ? 1.0 : 0.9);
+      this.selectionGraphics.strokeRect(x, y, w, h);
+    };
+
+    if (this.p1Index === this.p2Index) {
+      // Both on same character: single magenta box
+      const cx = startX + this.p1Index * spacing;
+      const confirmed = this.p1Confirmed || this.p2Confirmed;
+      drawSelectionBox(cx, 0xff44ff, confirmed);
+    } else {
+      drawSelectionBox(startX + this.p1Index * spacing, 0x4488ff, this.p1Confirmed);
+      drawSelectionBox(startX + this.p2Index * spacing, 0xff4444, this.p2Confirmed);
+    }
+
+    // Manage LOCKED texts — destroy stale ones and create new ones if needed
+    if (this.p1Confirmed) {
+      const targetX = startX + this.p1Index * spacing;
+      const targetY = spriteBaseY - boxHalfH - 18;
+      if (!this.p1LockedText) {
+        this.p1LockedText = this.add.text(targetX, targetY, 'LOCKED', {
+          fontSize: '13px',
+          fontFamily: 'monospace',
+          color: '#4488ff',
+          fontStyle: 'bold',
+          stroke: '#000000',
+          strokeThickness: 3,
+        }).setOrigin(0.5).setDepth(10);
+        this.lockedTexts.push(this.p1LockedText);
+      } else {
+        this.p1LockedText.setPosition(targetX, targetY);
+      }
+    }
+
+    if (this.p2Confirmed) {
+      const sameSlot = this.p1Index === this.p2Index;
+      const targetX = startX + this.p2Index * spacing + (sameSlot ? 0 : 0);
+      const targetY = spriteBaseY - boxHalfH - (this.p1Confirmed && sameSlot ? 34 : 18);
+      if (!this.p2LockedText) {
+        this.p2LockedText = this.add.text(targetX, targetY, 'LOCKED', {
+          fontSize: '13px',
+          fontFamily: 'monospace',
+          color: '#ff4444',
+          fontStyle: 'bold',
+          stroke: '#000000',
+          strokeThickness: 3,
+        }).setOrigin(0.5).setDepth(10);
+        this.lockedTexts.push(this.p2LockedText);
+      } else {
+        this.p2LockedText.setPosition(targetX, targetY);
+      }
+    }
 
     // Update walk animation and pulse tween for each sprite
     this.characterSprites.forEach((spr, i) => {
@@ -436,5 +522,9 @@ export class CharacterSelectScene extends Phaser.Scene {
     this.p2SelectTween = null;
     this.characterSprites.forEach((s) => s.destroy());
     this.characterSprites = [];
+    this.lockedTexts.forEach((t) => t.destroy());
+    this.lockedTexts = [];
+    this.p1LockedText = null;
+    this.p2LockedText = null;
   }
 }
