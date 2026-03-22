@@ -685,12 +685,19 @@ export class FightScene extends Phaser.Scene {
     this.p1.update(delta, p1Input, this.p2);
     this.p2.update(delta, p2Input, this.p1);
 
-    // Dust particles on landing
+    // Dust particles and land sound on landing
     if (this.p1.justLanded) {
       this.spawnDustParticles(this.p1.x, GROUND_Y);
+      soundManager.playLand();
     }
     if (this.p2.justLanded) {
       this.spawnDustParticles(this.p2.x, GROUND_Y);
+      soundManager.playLand();
+    }
+
+    // Whiff sound when an attack expires without hitting
+    if (this.p1.attackMissed || this.p2.attackMissed) {
+      soundManager.playWhiff();
     }
 
     // Check attack hits each frame during active attack windows

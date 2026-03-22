@@ -86,6 +86,9 @@ export class Fighter {
   /** Set to true on the frame a fighter lands; read by FightScene each update. */
   public justLanded = false;
 
+  /** Set to true on the frame an attack expires without having hit anyone. */
+  public attackMissed = false;
+
   private wasAirborne = false;
 
   // Track current attack type and whether it has already connected
@@ -215,6 +218,7 @@ export class Fighter {
   /** Process input and physics for one frame */
   update(dt: number, input: FighterInput, opponent: Fighter): void {
     this.justLanded = false;
+    this.attackMissed = false;
 
     if (this.state === 'ko') {
       this.syncGraphics();
@@ -228,6 +232,10 @@ export class Fighter {
       this.attackTimer -= dt;
       if (this.attackTimer <= 0) {
         this.attackTimer = 0;
+        // If the attack expired without connecting, flag a miss
+        if (!this.hasHitThisAttack && this.currentAttackType !== null) {
+          this.attackMissed = true;
+        }
         // attack animation ended
         this.state = this.onGround ? 'idle' : 'jumping';
       }

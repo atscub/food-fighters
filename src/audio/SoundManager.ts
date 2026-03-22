@@ -170,6 +170,64 @@ class SoundManager {
     }
   }
 
+  /** Short low thud when a fighter lands on the ground. */
+  playLand(): void {
+    if (!this.started) return;
+    try {
+      const now = Tone.now();
+      const land = new Tone.MembraneSynth({
+        pitchDecay: 0.01,
+        octaves: 4,
+        envelope: {
+          attack: 0.001,
+          decay: 0.05,
+          sustain: 0,
+          release: 0.02,
+        },
+        volume: -20,
+      }).toDestination();
+
+      land.triggerAttackRelease('C2', '32n', now);
+      setTimeout(() => land.dispose(), 200);
+    } catch {
+      // ignore
+    }
+  }
+
+  /** Quiet whoosh for a missed attack. */
+  playWhiff(): void {
+    if (!this.started) return;
+    try {
+      const now = Tone.now();
+      const filter = new Tone.Filter({
+        type: 'bandpass',
+        frequency: 1200,
+        Q: 0.8,
+      }).toDestination();
+
+      const whiff = new Tone.NoiseSynth({
+        noise: { type: 'white' },
+        envelope: {
+          attack: 0.01,
+          decay: 0.12,
+          sustain: 0,
+          release: 0.05,
+        },
+        volume: -28,
+      }).connect(filter);
+
+      filter.frequency.linearRampTo(400, 0.12, now);
+      whiff.triggerAttackRelease('16n', now);
+
+      setTimeout(() => {
+        whiff.dispose();
+        filter.dispose();
+      }, 300);
+    } catch {
+      // ignore
+    }
+  }
+
   /** Upward pitch sweep when a fighter jumps. */
   playJump(): void {
     if (!this.started) return;
