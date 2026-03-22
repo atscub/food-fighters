@@ -152,6 +152,8 @@ export class FightScene extends Phaser.Scene {
         fontSize: '12px',
         fontFamily: 'monospace',
         color: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 3,
       })
       .setOrigin(0)
       .setDepth(22);
@@ -161,6 +163,8 @@ export class FightScene extends Phaser.Scene {
         fontSize: '12px',
         fontFamily: 'monospace',
         color: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 3,
       })
       .setOrigin(1, 0)
       .setDepth(22);
@@ -172,6 +176,8 @@ export class FightScene extends Phaser.Scene {
         fontFamily: 'monospace',
         color: '#ffffff',
         fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 4,
       })
       .setOrigin(0.5)
       .setDepth(22);
@@ -182,6 +188,8 @@ export class FightScene extends Phaser.Scene {
         fontSize: '14px',
         fontFamily: 'monospace',
         color: '#cccccc',
+        stroke: '#000000',
+        strokeThickness: 3,
       })
       .setOrigin(0.5)
       .setDepth(22);
@@ -189,18 +197,22 @@ export class FightScene extends Phaser.Scene {
     // Win counters
     this.p1WinsText = this.add
       .text(45, 50, `Wins: ${this.p1Wins}`, {
-        fontSize: '12px',
+        fontSize: '14px',
         fontFamily: 'monospace',
         color: '#66aaff',
+        stroke: '#000000',
+        strokeThickness: 3,
       })
       .setOrigin(0)
       .setDepth(22);
 
     this.p2WinsText = this.add
       .text(GAME_WIDTH - 45, 50, `Wins: ${this.p2Wins}`, {
-        fontSize: '12px',
+        fontSize: '14px',
         fontFamily: 'monospace',
         color: '#ff6666',
+        stroke: '#000000',
+        strokeThickness: 3,
       })
       .setOrigin(1, 0)
       .setDepth(22);
@@ -213,7 +225,8 @@ export class FightScene extends Phaser.Scene {
 
     // Help hint
     this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 10, 'Press H for controls', {
-      fontSize: '10px', fontFamily: 'monospace', color: '#666666',
+      fontSize: '12px', fontFamily: 'monospace', color: '#888888',
+      stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5).setDepth(22);
 
     // Show "Round 1" then "FIGHT!" then start

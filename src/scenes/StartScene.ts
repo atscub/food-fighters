@@ -8,6 +8,27 @@ export class StartScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Gradient background: dark blue at top to dark red at bottom via vertical stripes
+    const bg = this.add.graphics();
+    const stripeCount = 40;
+    const stripeHeight = GAME_HEIGHT / stripeCount;
+    for (let i = 0; i < stripeCount; i++) {
+      const t = i / (stripeCount - 1);
+      const r = Math.round(0x1a + t * (0x2e - 0x1a));
+      const g = Math.round(0x0a + t * (0x0a - 0x0a));
+      const b = Math.round(0x2e + t * (0x0a - 0x2e));
+      const color = (r << 16) | (g << 8) | b;
+      bg.fillStyle(color, 1);
+      bg.fillRect(0, Math.floor(i * stripeHeight), GAME_WIDTH, Math.ceil(stripeHeight) + 1);
+    }
+
+    // Floor bar at the bottom
+    const floorBar = this.add.graphics();
+    floorBar.fillStyle(0x0d0505, 1);
+    floorBar.fillRect(0, GAME_HEIGHT - 24, GAME_WIDTH, 24);
+    floorBar.fillStyle(0x4a1a1a, 1);
+    floorBar.fillRect(0, GAME_HEIGHT - 26, GAME_WIDTH, 2);
+
     // Title text
     this.add
       .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60, 'FOOD FIGHTERS', {
@@ -15,15 +36,29 @@ export class StartScene extends Phaser.Scene {
         fontFamily: 'monospace',
         color: '#ffcc00',
         fontStyle: 'bold',
+        stroke: '#7a4400',
+        strokeThickness: 4,
       })
       .setOrigin(0.5);
 
-    // Prompt text with blinking effect
-    const prompt = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 40, 'Press ENTER to start', {
-        fontSize: '20px',
+    // Subtitle text
+    this.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'Local Multiplayer Kitchen Brawl', {
+        fontSize: '16px',
         fontFamily: 'monospace',
         color: '#ffffff',
+      })
+      .setOrigin(0.5)
+      .setAlpha(0.7);
+
+    // Prompt text with blinking effect
+    const prompt = this.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 50, 'Press ENTER to start', {
+        fontSize: '24px',
+        fontFamily: 'monospace',
+        color: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 3,
       })
       .setOrigin(0.5);
 

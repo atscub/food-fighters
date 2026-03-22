@@ -9,7 +9,7 @@ export const TOTAL_ROUNDS = 3;
 export const WINS_NEEDED = 2;
 
 // Physics
-export const GROUND_Y = 380;
+export const GROUND_Y = 390;
 export const GRAVITY = 800;
 export const MOVE_SPEED = 200;
 export const JUMP_VELOCITY = -400;
@@ -29,10 +29,10 @@ export const ATTACK_DURATION = 200; // ms attack hitbox is active
 export const HIT_STUN_DURATION = 300; // ms invulnerability after being hit
 
 // Fighter dimensions
-export const FIGHTER_WIDTH = 40;
-export const FIGHTER_HEIGHT = 60;
-export const HITBOX_WIDTH = 45; // attack hitbox extends in front
-export const HITBOX_HEIGHT = 40;
+export const FIGHTER_WIDTH = 80;
+export const FIGHTER_HEIGHT = 100;
+export const HITBOX_WIDTH = 70; // attack hitbox extends in front
+export const HITBOX_HEIGHT = 70;
 
 // Sprite frame dimensions (each spritesheet is 512x128 with 4 frames)
 export const SPRITE_FRAME_WIDTH = 128;

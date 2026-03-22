@@ -45,6 +45,28 @@ export class CharacterSelectScene extends Phaser.Scene {
     this.p1Confirmed = false;
     this.p2Confirmed = false;
 
+    // Gradient background: dark purple at top to dark teal at bottom via vertical stripes
+    const bg = this.add.graphics();
+    const stripeCount = 40;
+    const stripeHeight = GAME_HEIGHT / stripeCount;
+    for (let i = 0; i < stripeCount; i++) {
+      const t = i / (stripeCount - 1);
+      const r = Math.round(0x0a + t * (0x0a - 0x0a));
+      const g = Math.round(0x0a + t * (0x1e - 0x0a));
+      const b = Math.round(0x2e + t * (0x2e - 0x2e));
+      const color = (r << 16) | (g << 8) | b;
+      bg.fillStyle(color, 1);
+      bg.fillRect(0, Math.floor(i * stripeHeight), GAME_WIDTH, Math.ceil(stripeHeight) + 1);
+    }
+
+    // Horizontal divider between character area and controls text
+    const divider = this.add.graphics();
+    divider.lineStyle(1, 0x334455, 0.8);
+    divider.beginPath();
+    divider.moveTo(40, GAME_HEIGHT - 80);
+    divider.lineTo(GAME_WIDTH - 40, GAME_HEIGHT - 80);
+    divider.strokePath();
+
     // Title
     this.add
       .text(GAME_WIDTH / 2, 40, 'SELECT YOUR CHARACTER', {
@@ -100,6 +122,8 @@ export class CharacterSelectScene extends Phaser.Scene {
           fontSize: '22px',
           fontFamily: 'monospace',
           color: '#ffffff',
+          stroke: '#000000',
+          strokeThickness: 3,
         })
         .setOrigin(0.5);
     });
