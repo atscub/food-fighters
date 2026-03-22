@@ -748,8 +748,8 @@ export class FightScene extends Phaser.Scene {
     }
 
     // Update HP bars
-    this.updateHpBar(this.p1HpBar, this.p1.hp);
-    this.updateHpBar(this.p2HpBar, this.p2.hp);
+    this.updateHpBar(this.p1HpBar, this.p1HpBg, this.p1.hp);
+    this.updateHpBar(this.p2HpBar, this.p2HpBg, this.p2.hp);
 
     // Check for KO
     if (this.p1.isKO || this.p2.isKO) {
@@ -885,9 +885,21 @@ export class FightScene extends Phaser.Scene {
     }
   }
 
-  private updateHpBar(bar: Phaser.GameObjects.Rectangle, hp: number): void {
+  private updateHpBar(
+    bar: Phaser.GameObjects.Rectangle,
+    bg: Phaser.GameObjects.Rectangle,
+    hp: number,
+  ): void {
     const ratio = hp / MAX_HP;
-    bar.width = ratio * 250;
+    const targetWidth = ratio * 250;
+
+    // Animate bar width with a tween (Phaser overwrites existing tweens on same target+property)
+    this.tweens.add({
+      targets: bar,
+      width: targetWidth,
+      duration: 150,
+      ease: 'Sine.easeOut',
+    });
 
     // Color: green -> yellow -> red
     if (ratio > 0.5) {
@@ -897,6 +909,9 @@ export class FightScene extends Phaser.Scene {
     } else {
       bar.fillColor = 0xcc4444; // red
     }
+
+    // Low HP warning: darken the background bar
+    bg.fillColor = ratio <= 0.25 ? 0x440000 : 0x333333;
   }
 
   shutdown(): void {
