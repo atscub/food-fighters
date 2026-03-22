@@ -287,10 +287,11 @@ export class Fighter {
       }
     }
 
-    // --- Push-back collision with opponent ---
+    // --- Push-back collision with opponent (only when at similar height) ---
+    const verticalGap = Math.abs(this.y - opponent.y);
     const minDist = FIGHTER_WIDTH;
     const dist = Math.abs(this.x - opponent.x);
-    if (dist < minDist && dist > 0) {
+    if (dist < minDist && dist > 0 && verticalGap < FIGHTER_HEIGHT * 0.7) {
       const overlap = minDist - dist;
       const pushDir = this.x < opponent.x ? -1 : 1;
       this.x += pushDir * (overlap / 2);
