@@ -14,6 +14,7 @@ import {
   SPRITE_FRAME_HEIGHT,
   ANIM_STATES,
   animSpriteKey,
+  FIGHTER_HEIGHT,
 } from '../config/constants';
 import { Fighter, FighterInput } from '../objects/Fighter';
 import { TouchControls } from '../objects/TouchControls';
@@ -335,6 +336,8 @@ export class FightScene extends Phaser.Scene {
     this._roundEnded = false;
     this.roundTimer = ROUND_TIME;
     this.timerText.setText(String(this.roundTimer));
+    this.timerText.setColor('#ffffff');
+    this.timerText.setScale(1.0);
 
     // Start background music on first round, resume if stopped
     soundManager.playBGM();
@@ -345,6 +348,20 @@ export class FightScene extends Phaser.Scene {
         if (!this.roundActive) return;
         this.roundTimer--;
         this.timerText.setText(String(this.roundTimer));
+        if (this.roundTimer <= 10) {
+          this.timerText.setColor('#ff4444');
+          this.tweens.add({
+            targets: this.timerText,
+            scaleX: 1.3,
+            scaleY: 1.3,
+            duration: 100,
+            ease: 'Power1',
+            yoyo: true,
+            onComplete: () => {
+              this.timerText.setScale(1.0);
+            },
+          });
+        }
         if (this.roundTimer <= 0) {
           this.endRound();
         }
@@ -484,8 +501,24 @@ export class FightScene extends Phaser.Scene {
     this.p2.update(delta, p2Input, this.p1);
 
     // Check attack hits each frame during active attack windows
+    const p1HpBefore = this.p1.hp;
+    const p2HpBefore = this.p2.hp;
     const p1Result = this.p1.checkAttackHit(this.p2);
     const p2Result = this.p2.checkAttackHit(this.p1);
+
+    // Floating damage numbers
+    if (p2Result === 'hit' || p2Result === 'blocked') {
+      const dmg = p1HpBefore - this.p1.hp;
+      if (dmg > 0) {
+        this.showDamageNumber(this.p1.x, this.p1.y - FIGHTER_HEIGHT, dmg, p2Result === 'blocked');
+      }
+    }
+    if (p1Result === 'hit' || p1Result === 'blocked') {
+      const dmg = p2HpBefore - this.p2.hp;
+      if (dmg > 0) {
+        this.showDamageNumber(this.p2.x, this.p2.y - FIGHTER_HEIGHT, dmg, p1Result === 'blocked');
+      }
+    }
 
     // Sound effects for hits / blocks
     if (p1Result === 'hit' || p2Result === 'hit') {
@@ -518,6 +551,30 @@ export class FightScene extends Phaser.Scene {
         this.endRound();
       });
     }
+  }
+
+  private showDamageNumber(x: number, y: number, damage: number, blocked: boolean): void {
+    const color = blocked ? '#aaaaaa' : '#ffff00';
+    const fontSize = blocked ? '16px' : '22px';
+    const text = this.add.text(x, y, String(damage), {
+      fontSize,
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+      color,
+      stroke: '#000000',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(30);
+
+    this.tweens.add({
+      targets: text,
+      y: y - 50,
+      alpha: 0,
+      duration: 800,
+      ease: 'Power1',
+      onComplete: () => {
+        text.destroy();
+      },
+    });
   }
 
   private flashScreen(): void {

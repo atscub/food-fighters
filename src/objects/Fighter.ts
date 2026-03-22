@@ -257,6 +257,9 @@ export class Fighter {
       this.velX = 0;
       if (input.left) this.velX = -this.stats.speed;
       if (input.right) this.velX = this.stats.speed;
+    } else if (this.state === 'hitstun') {
+      // Preserve knockback velocity during hitstun; dampen it over time
+      this.velX *= 0.85;
     } else {
       // During attack/blocking, no horizontal movement
       this.velX = 0;
@@ -358,7 +361,8 @@ export class Fighter {
         isAerial: !this.onGround,
         isBlocking,
       });
-      opponent.takeDamage(dmg);
+      const kbDir = this.facingRight ? 1 : -1;
+      opponent.takeDamage(dmg, kbDir);
       this.hasHitThisAttack = true;
       return isBlocking ? 'blocked' : 'hit';
     }
@@ -389,7 +393,7 @@ export class Fighter {
     return aLeft < dRight && aRight > dLeft && aTop < dBottom && aBottom > dTop;
   }
 
-  takeDamage(amount: number): void {
+  takeDamage(amount: number, knockbackDir?: number): void {
     if (this.hitStunTimer > 0 || this.state === 'ko') return;
 
     this.hp -= amount;
@@ -401,6 +405,7 @@ export class Fighter {
     } else {
       this.hitStunTimer = HIT_STUN_DURATION;
       this.state = 'hitstun';
+      this.velX = (knockbackDir || 0) * 150;
     }
   }
 
