@@ -618,6 +618,14 @@ export class FightScene extends Phaser.Scene {
     this.p1.update(delta, p1Input, this.p2);
     this.p2.update(delta, p2Input, this.p1);
 
+    // Dust particles on landing
+    if (this.p1.justLanded) {
+      this.spawnDustParticles(this.p1.x, GROUND_Y);
+    }
+    if (this.p2.justLanded) {
+      this.spawnDustParticles(this.p2.x, GROUND_Y);
+    }
+
     // Check attack hits each frame during active attack windows
     const p1HpBefore = this.p1.hp;
     const p2HpBefore = this.p2.hp;
@@ -657,6 +665,12 @@ export class FightScene extends Phaser.Scene {
       soundManager.playHit();
       this.cameras.main.shake(100, 0.005);
       this.flashScreen();
+      if (p1Result === 'hit') {
+        this.spawnHitSparks(this.p2.x, this.p2.y - FIGHTER_HEIGHT / 2);
+      }
+      if (p2Result === 'hit') {
+        this.spawnHitSparks(this.p1.x, this.p1.y - FIGHTER_HEIGHT / 2);
+      }
     } else if (p1Result === 'blocked' || p2Result === 'blocked') {
       soundManager.playBlock();
     }
@@ -749,6 +763,59 @@ export class FightScene extends Phaser.Scene {
         flash.destroy();
       },
     });
+  }
+
+  private spawnDustParticles(x: number, y: number): void {
+    const count = Phaser.Math.Between(5, 8);
+    for (let i = 0; i < count; i++) {
+      const offsetX = Phaser.Math.Between(-20, 20);
+      const radius = Phaser.Math.Between(2, 4);
+      const particle = this.add.arc(x + offsetX, y, radius, 0, 360, false)
+        .setFillStyle(0xccaa88, 0.6)
+        .setDepth(12);
+
+      const velX = Phaser.Math.Between(-60, 60);
+      const velY = Phaser.Math.Between(-50, -20);
+
+      this.tweens.add({
+        targets: particle,
+        x: particle.x + velX * 0.4,
+        y: particle.y + velY * 0.4,
+        alpha: 0,
+        duration: 400,
+        ease: 'Power1',
+        onComplete: () => {
+          particle.destroy();
+        },
+      });
+    }
+  }
+
+  private spawnHitSparks(x: number, y: number): void {
+    const count = Phaser.Math.Between(4, 6);
+    for (let i = 0; i < count; i++) {
+      const offsetX = Phaser.Math.Between(-15, 15);
+      const offsetY = Phaser.Math.Between(-15, 15);
+      const spark = this.add.rectangle(x + offsetX, y + offsetY, 3, 3, 0xffff44)
+        .setDepth(16);
+
+      const velX = Phaser.Math.Between(-80, 80);
+      const velY = Phaser.Math.Between(-80, 80);
+
+      this.tweens.add({
+        targets: spark,
+        x: spark.x + velX * 0.3,
+        y: spark.y + velY * 0.3,
+        alpha: 0,
+        scaleX: 0,
+        scaleY: 0,
+        duration: 300,
+        ease: 'Power2',
+        onComplete: () => {
+          spark.destroy();
+        },
+      });
+    }
   }
 
   private updateHpBar(bar: Phaser.GameObjects.Rectangle, hp: number): void {

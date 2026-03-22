@@ -80,6 +80,11 @@ export class Fighter {
   /** Set to true on the frame a jump starts; cleared by the caller. */
   public jumpedThisFrame = false;
 
+  /** Set to true on the frame a fighter lands; read by FightScene each update. */
+  public justLanded = false;
+
+  private wasAirborne = false;
+
   // Track current attack type and whether it has already connected
   private currentAttackType: AttackType | null = null;
   private hasHitThisAttack = false;
@@ -205,6 +210,8 @@ export class Fighter {
 
   /** Process input and physics for one frame */
   update(dt: number, input: FighterInput, opponent: Fighter): void {
+    this.justLanded = false;
+
     if (this.state === 'ko') {
       this.syncGraphics();
       return;
@@ -302,6 +309,11 @@ export class Fighter {
       }
     }
 
+    // Detect landing: was in the air last frame, now on the ground
+    if (this.wasAirborne && this.onGround) {
+      this.justLanded = true;
+    }
+
     // --- Push-back collision with opponent (only when at similar height) ---
     const verticalGap = Math.abs(this.y - opponent.y);
     const minDist = FIGHTER_WIDTH;
@@ -338,6 +350,9 @@ export class Fighter {
     this.prevPunch = input.punch;
     this.prevKick = input.kick;
     this.prevJump = input.jump;
+
+    // Track airborne state for next frame's landing detection
+    this.wasAirborne = !this.onGround;
 
     // Sync graphics
     this.syncGraphics();
