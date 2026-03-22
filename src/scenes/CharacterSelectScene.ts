@@ -153,8 +153,8 @@ export class CharacterSelectScene extends Phaser.Scene {
     // Stat bars under each character name
     const maxBarWidth = 60;
     const barHeight = 6;
-    const barBaseY = GAME_HEIGHT / 2 + 24;
-    const barSpacingY = 14;
+    const barBaseY = GAME_HEIGHT / 2 + 28;
+    const barSpacingY = 20;
 
     CHARACTER_KEYS.forEach((key, i) => {
       const char = CHARACTERS[key];
@@ -213,7 +213,7 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     // P1 selection indicator
     this.p1Text = this.add
-      .text(0, GAME_HEIGHT / 2 + 80, 'P1', {
+      .text(0, GAME_HEIGHT / 2 + 84, 'P1', {
         fontSize: '16px',
         fontFamily: 'monospace',
         color: '#66aaff',
@@ -223,7 +223,7 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     // P2 selection indicator
     this.p2Text = this.add
-      .text(0, GAME_HEIGHT / 2 + 98, 'P2', {
+      .text(0, GAME_HEIGHT / 2 + 102, 'P2', {
         fontSize: '16px',
         fontFamily: 'monospace',
         color: '#ff6666',
