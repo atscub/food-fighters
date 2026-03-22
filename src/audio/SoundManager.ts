@@ -420,6 +420,26 @@ class SoundManager {
     }
   }
 
+  /** Pause background music (preserves playback position). */
+  pauseBGM(): void {
+    if (!this.bgmPlaying) return;
+    try {
+      Tone.getTransport().pause();
+    } catch {
+      // ignore
+    }
+  }
+
+  /** Resume background music after a pause. */
+  resumeBGM(): void {
+    if (!this.bgmPlaying) return;
+    try {
+      Tone.getTransport().start();
+    } catch {
+      // ignore
+    }
+  }
+
   /** Stop background music. */
   stopBGM(): void {
     if (!this.bgmPlaying) return;

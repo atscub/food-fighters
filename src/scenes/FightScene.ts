@@ -73,6 +73,11 @@ export class FightScene extends Phaser.Scene {
   private helpOverlay: Phaser.GameObjects.Container | null = null;
   private keyH!: Phaser.Input.Keyboard.Key;
   private keyEsc!: Phaser.Input.Keyboard.Key;
+  private keyP!: Phaser.Input.Keyboard.Key;
+
+  // Pause state
+  private paused = false;
+  private pauseOverlay: Phaser.GameObjects.Container | null = null;
 
   // Winner screen objects for cleanup
   private winnerScreenObjects: Phaser.GameObjects.GameObject[] = [];
@@ -257,6 +262,9 @@ export class FightScene extends Phaser.Scene {
     this.keyH = kb.addKey(Phaser.Input.Keyboard.KeyCodes.H);
     this.keyH.on('down', () => this.toggleHelp());
 
+    this.keyP = kb.addKey(Phaser.Input.Keyboard.KeyCodes.P);
+    this.keyP.on('down', () => this.togglePause());
+
     this.keyEsc = kb.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
     this.keyEsc.on('down', () => {
       soundManager.stopBGM();
@@ -301,6 +309,59 @@ export class FightScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.helpOverlay = this.add.container(0, 0, [bg, title, body]).setDepth(100);
+  }
+
+  private togglePause(): void {
+    // Don't allow pause when winner screen is showing
+    if (this.winnerScreenObjects.length > 0) return;
+
+    if (this.paused) {
+      // Unpause
+      if (this.pauseOverlay) {
+        this.pauseOverlay.destroy();
+        this.pauseOverlay = null;
+      }
+      this.paused = false;
+      this.time.paused = false;
+      soundManager.resumeBGM();
+    } else if (this.roundActive) {
+      // Pause
+      this.paused = true;
+      this.time.paused = true;
+      soundManager.pauseBGM();
+
+      const cx = GAME_WIDTH / 2;
+      const cy = GAME_HEIGHT / 2;
+
+      const bg = this.add.rectangle(cx, cy, GAME_WIDTH, GAME_HEIGHT, 0x000000, 0.8).setOrigin(0.5);
+
+      const titleText = this.add.text(cx, cy - 60, 'PAUSED', {
+        fontSize: '48px',
+        fontFamily: 'monospace',
+        color: '#ffffff',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 5,
+      }).setOrigin(0.5);
+
+      const resumeText = this.add.text(cx, cy + 20, 'Press P to resume', {
+        fontSize: '20px',
+        fontFamily: 'monospace',
+        color: '#aaffaa',
+        stroke: '#000000',
+        strokeThickness: 3,
+      }).setOrigin(0.5);
+
+      const quitText = this.add.text(cx, cy + 56, 'Press ESC to quit', {
+        fontSize: '20px',
+        fontFamily: 'monospace',
+        color: '#ffaaaa',
+        stroke: '#000000',
+        strokeThickness: 3,
+      }).setOrigin(0.5);
+
+      this.pauseOverlay = this.add.container(0, 0, [bg, titleText, resumeText, quitText]).setDepth(90);
+    }
   }
 
   private showRoundIntro(): void {
@@ -568,6 +629,11 @@ export class FightScene extends Phaser.Scene {
       this.helpOverlay.destroy();
       this.helpOverlay = null;
     }
+    if (this.pauseOverlay) {
+      this.pauseOverlay.destroy();
+      this.pauseOverlay = null;
+    }
+    this.paused = false;
   }
 
   /** Read keyboard state and merge with touch for P1 */
@@ -609,6 +675,7 @@ export class FightScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
+    if (this.paused) return;
     if (!this.roundActive) return;
 
     // Update fighters with input
