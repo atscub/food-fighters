@@ -518,8 +518,8 @@ export class FightScene extends Phaser.Scene {
       this.roundText.setText(`Round ${this.round}`);
 
       // Reset fighters
-      this.p1.reset(200);
-      this.p2.reset(600);
+      this.p1.reset(200, true);
+      this.p2.reset(600, false);
 
       // Show round intro after announcement has had time to display
       const introDelay = outcome !== 'draw' ? 2000 : 500;
@@ -722,7 +722,14 @@ export class FightScene extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     if (this.paused) return;
-    if (!this.roundActive) return;
+
+    // After KO, keep updating fighters for knockback physics
+    if (!this.roundActive) {
+      const noInput: FighterInput = { left: false, right: false, jump: false, block: false, punch: false, kick: false };
+      this.p1.update(delta, noInput, this.p2);
+      this.p2.update(delta, noInput, this.p1);
+      return;
+    }
 
     // Update fighters with input
     const p1Input = this.getP1Input();
@@ -811,6 +818,10 @@ export class FightScene extends Phaser.Scene {
     if (this.p1.jumpedThisFrame || this.p2.jumpedThisFrame) {
       soundManager.playJump();
     }
+
+    // Sync fighter graphics after combat resolution (ensures KO animation starts)
+    this.p1.syncGraphics();
+    this.p2.syncGraphics();
 
     // Update HP bars
     this.updateHpBar(this.p1HpBar, this.p1HpBg, this.p1.hp);
@@ -956,16 +967,7 @@ export class FightScene extends Phaser.Scene {
     hp: number,
   ): void {
     const ratio = hp / MAX_HP;
-    const targetWidth = ratio * 250;
-
-    // Kill any running tween on this bar before starting a new one
-    this.tweens.killTweensOf(bar);
-    this.tweens.add({
-      targets: bar,
-      width: targetWidth,
-      duration: 150,
-      ease: 'Sine.easeOut',
-    });
+    bar.scaleX = ratio;
 
     // Color: green -> yellow -> red
     if (ratio > 0.5) {

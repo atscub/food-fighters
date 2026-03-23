@@ -180,13 +180,14 @@ export class Fighter {
   }
 
   /** Reset fighter for a new round */
-  reset(x: number): void {
+  reset(x: number, facingRight: boolean): void {
     this.x = x;
     this.y = GROUND_Y;
     this.velX = 0;
     this.velY = 0;
     this.hp = this.stats.hp;
     this.state = 'idle';
+    this.facingRight = facingRight;
     this.attackTimer = 0;
     this.cooldownTimer = 0;
     this.hitStunTimer = 0;
@@ -204,6 +205,7 @@ export class Fighter {
     if (this.sprite) {
       this.sprite.clearTint();
       this.sprite.setAlpha(1);
+      this.sprite.setFlipX(!facingRight);
       const baseScaleX = FIGHTER_WIDTH / SPRITE_FRAME_WIDTH;
       const baseScaleY = FIGHTER_HEIGHT / SPRITE_FRAME_HEIGHT;
       this.sprite.setScale(baseScaleX, baseScaleY);
@@ -221,6 +223,21 @@ export class Fighter {
     this.attackMissed = false;
 
     if (this.state === 'ko') {
+      const dtSec = dt / 1000;
+      // Apply gravity and movement for KO knockback
+      if (!this.onGround) {
+        this.velY += GRAVITY * dtSec;
+      } else {
+        this.velX *= 0.85; // friction on ground
+      }
+      this.x += this.velX * dtSec;
+      this.y += this.velY * dtSec;
+      if (this.y >= GROUND_Y) {
+        this.y = GROUND_Y;
+        this.velY = 0;
+        this.onGround = true;
+      }
+      this.x = Phaser.Math.Clamp(this.x, FIGHTER_WIDTH / 2, GAME_WIDTH - FIGHTER_WIDTH / 2);
       this.syncGraphics();
       return;
     }
@@ -455,8 +472,10 @@ export class Fighter {
     if (this.hp <= 0) {
       this.hp = 0;
       this.state = 'ko';
-      this.velX = 0;
-      this.velY = 0;
+      // Launch backwards and upward
+      this.velX = (knockbackDir || 0) * 180;
+      this.velY = -180;
+      this.onGround = false;
     } else {
       this.hitStunTimer =
         this.stats.ability === 'quickRecovery' ? HIT_STUN_DURATION * 0.75 : HIT_STUN_DURATION;
@@ -491,7 +510,7 @@ export class Fighter {
     }
   }
 
-  private syncGraphics(): void {
+  syncGraphics(): void {
     // Update shadow
     this.shadow.setPosition(this.x, GROUND_Y + 2);
     if (this.state === 'ko') {
@@ -541,7 +560,7 @@ export class Fighter {
           this.sprite.setAlpha(0.5);
         }
       } else if (this.state === 'ko') {
-        this.sprite.setAlpha(0.4);
+        this.sprite.setAlpha(1);
         this.sprite.clearTint();
         // Scale is normal; the KO spritesheet already shows the collapsed pose
         this.sprite.setScale(baseScaleX, baseScaleY);
@@ -562,7 +581,7 @@ export class Fighter {
     if (this.state === 'hitstun') {
       this.body.setAlpha(Math.sin(Date.now() * 0.02) > 0 ? 1 : 0.3);
     } else if (this.state === 'ko') {
-      this.body.setAlpha(0.4);
+      this.body.setAlpha(1);
       // Tilt the KO'd fighter by shrinking height (since we can't rotate rectangles easily)
       this.body.height = FIGHTER_HEIGHT * 0.4;
       this.body.y = this.y - (FIGHTER_HEIGHT * 0.4) / 2;
