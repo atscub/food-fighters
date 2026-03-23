@@ -10,6 +10,7 @@ import {
   animSpriteKey,
 } from '../config/constants';
 import { soundManager } from '../audio/SoundManager';
+import { trackCharacterSelected } from '../utils/analytics';
 
 export class CharacterSelectScene extends Phaser.Scene {
   private p1Index = 0;
@@ -284,8 +285,10 @@ export class CharacterSelectScene extends Phaser.Scene {
     keyF.on('down', () => {
       if (!this.p1Confirmed) {
         this.p1Confirmed = true;
+        const charName = CHARACTER_KEYS[this.p1Index];
+        trackCharacterSelected('P1', charName);
         this.p1ConfirmText.setText(
-          `P1: ${CHARACTERS[CHARACTER_KEYS[this.p1Index]].name} LOCKED IN!`
+          `P1: ${CHARACTERS[charName].name} LOCKED IN!`
         );
         this.updateSelectionDisplay();
         soundManager.playConfirm();
@@ -322,8 +325,10 @@ export class CharacterSelectScene extends Phaser.Scene {
     keyK.on('down', () => {
       if (!this.p2Confirmed) {
         this.p2Confirmed = true;
+        const charName = CHARACTER_KEYS[this.p2Index];
+        trackCharacterSelected('P2', charName);
         this.p2ConfirmText.setText(
-          `P2: ${CHARACTERS[CHARACTER_KEYS[this.p2Index]].name} LOCKED IN!`
+          `P2: ${CHARACTERS[charName].name} LOCKED IN!`
         );
         this.updateSelectionDisplay();
         soundManager.playConfirm();

@@ -20,6 +20,7 @@ import { Fighter, FighterInput } from '../objects/Fighter';
 import { TouchControls } from '../objects/TouchControls';
 import { determineRoundWinner } from '../utils/damage';
 import { soundManager } from '../audio/SoundManager';
+import { trackFightStarted, trackRoundEnded, trackMatchEnded, trackRematch } from '../utils/analytics';
 
 interface FightData {
   p1Character: string;
@@ -123,6 +124,7 @@ export class FightScene extends Phaser.Scene {
   }
 
   create(): void {
+    trackFightStarted(this.p1Character, this.p2Character);
     const p1Stats = CHARACTERS[this.p1Character];
     const p2Stats = CHARACTERS[this.p2Character];
 
@@ -271,6 +273,7 @@ export class FightScene extends Phaser.Scene {
     this.keyEsc = kb.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
     this.keyEsc.on('down', () => {
       soundManager.stopBGM();
+      soundManager.playMenuBGM();
       this.cleanUp();
       this.scene.start(SCENES.CHARACTER_SELECT);
     });
@@ -468,6 +471,7 @@ export class FightScene extends Phaser.Scene {
 
     // Determine round winner
     const outcome = determineRoundWinner(this.p1.hp, this.p2.hp);
+    trackRoundEnded(outcome, this.p1Character, this.p2Character, this.round);
     if (outcome === 'p1') {
       this.p1Wins++;
     } else if (outcome === 'p2') {
@@ -529,11 +533,15 @@ export class FightScene extends Phaser.Scene {
   }
 
   private showMatchWinner(): void {
-    // Stop background music when match ends
+    // Stop background music and play victory fanfare
     soundManager.stopBGM();
+    soundManager.playVictoryFanfare();
 
     // Disable ESC during winner screen so it doesn't conflict with ENTER handler
     this.keyEsc.removeAllListeners();
+
+    const matchWinner = this.p1Wins > this.p2Wins ? 'p1' : this.p2Wins > this.p1Wins ? 'p2' : 'draw';
+    trackMatchEnded(matchWinner, this.p1Character, this.p2Character, this.p1Wins, this.p2Wins);
 
     let winnerLabel: string;
     let winnerCharKey: string;
@@ -637,6 +645,7 @@ export class FightScene extends Phaser.Scene {
     enterKey.once('down', () => {
       this.winnerScreenObjects.forEach((obj) => obj.destroy());
       this.winnerScreenObjects = [];
+      soundManager.playMenuBGM();
       this.cleanUp();
       this.scene.start(SCENES.CHARACTER_SELECT);
     });
@@ -644,6 +653,7 @@ export class FightScene extends Phaser.Scene {
     // Listen once for R to rematch with same characters
     const rematchKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
     rematchKey.once('down', () => {
+      trackRematch(this.p1Character, this.p2Character);
       this.winnerScreenObjects.forEach((obj) => obj.destroy());
       this.winnerScreenObjects = [];
       this.cleanUp();

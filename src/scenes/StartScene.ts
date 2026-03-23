@@ -10,6 +10,7 @@ import {
   SPRITE_FRAME_HEIGHT,
 } from '../config/constants';
 import { soundManager } from '../audio/SoundManager';
+import { trackGameStart } from '../utils/analytics';
 
 export class StartScene extends Phaser.Scene {
   constructor() {
@@ -128,8 +129,10 @@ export class StartScene extends Phaser.Scene {
       Phaser.Input.Keyboard.KeyCodes.ENTER
     );
     enterKey.once('down', () => {
+      trackGameStart();
       void soundManager.init().then(() => {
         soundManager.playMenuSelect();
+        soundManager.playMenuBGM();
       });
       this.scene.start(SCENES.CHARACTER_SELECT);
     });
